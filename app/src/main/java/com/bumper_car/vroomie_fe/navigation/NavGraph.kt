@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.bumper_car.vroomie_fe.ui.screen.drive.DriveScreen
+import com.bumper_car.vroomie_fe.ui.screen.drivehistory.DriveHistoryDetailScreen
 import com.bumper_car.vroomie_fe.ui.screen.drivehistory.DriveHistoryScreen
 import com.bumper_car.vroomie_fe.ui.screen.drivescore.DriveScoreScreen
 import com.bumper_car.vroomie_fe.ui.screen.drivetip.DriveTipDetailScreen
@@ -46,7 +47,7 @@ fun AppNavHost(navController: NavHostController) {
             arguments = listOf((navArgument("id") { type = NavType.IntType }))
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("id") ?: return@composable
-            DriveHistoryScreen(id = id, navController = navController)
+            DriveHistoryDetailScreen(id = id, navController = navController)
         }
         composable(Screen.MyPage.route) { MyPageScreen(navController) }
     }
