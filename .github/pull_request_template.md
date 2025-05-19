@@ -1,12 +1,3 @@
----
-name: PullRequestTemplate
-about: 해당 PR 템플릿을 사용하여 이슈를 작성해 주세요.
-title: "[tag] title"
-labels: ''
-assignees: ''
-
----
-
 # #️⃣연관된 이슈
 #이슈번호
 
