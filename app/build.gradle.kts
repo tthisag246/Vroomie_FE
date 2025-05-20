@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.hilt.navigation)
     implementation(libs.hilt.android)
     implementation(libs.androidx.foundation.layout.android)
+    implementation(libs.core.splashscreen)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.compose.markdown)
