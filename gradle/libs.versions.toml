@@ -19,6 +19,7 @@ media3Ui = "1.7.1"
 media3Exoplayer = "1.7.1"
 coil = "3.2.0"
 compose-markdown = "0.5.7"
+splash = "1.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -48,6 +49,7 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "compose-markdown" }
+core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splash" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
