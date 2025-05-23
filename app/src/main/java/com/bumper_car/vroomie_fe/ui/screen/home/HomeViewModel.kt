@@ -1,10 +1,12 @@
 package com.bumper_car.vroomie_fe.ui.screen.home
 
+import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-//import com.bumper_car.vroomie_fe.domain.usecase.GetDriveScoreUseCase
-//import com.bumper_car.vroomie_fe.domain.usecase.GetDrivingTipsUseCase
-//import com.bumper_car.vroomie_fe.domain.usecase.GetSearchHistoryUserCase
+import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoLocalApiService
+import com.bumper_car.vroomie_fe.data.remote.kakao.model.AddressDocument
+import com.bumper_car.vroomie_fe.ui.screen.drive.NaviActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,10 +17,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-//    private val getDriveScoreUseCase: GetDriveScoreUseCase,
-//    private val getSearchHistoryUseCase: GetSearchHistoryUserCase,
-//    private val deleteSearchHistoryItemUseCase: DeleteSearchHistoryItemUseCase,
-//    private val getDrivingTipsUseCase: GetDrivingTipsUseCase
+    private val kakaoLocalApiService: KakaoLocalApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -26,22 +25,11 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-//            val score = getDriveScoreUseCase()
-//            val suggestions = getSearchHistoryUseCase()
-//            val tips = getDrivingTipsUseCase()
-
             _uiState.update {
                 it.copy(
-//                    driveScore = score,
-//                    suggestions = suggestions,
-//                    driveInformations = tips
                     driveScore = 63,
                     searchHistory = listOf(
-                        "중앙대학교",
-                        "강남역",
-                        "서울역",
-                        "잠실 롯데타워",
-                        "노들섬"
+                        "중앙대학교", "강남역", "서울역", "잠실 롯데타워", "노들섬"
                     ),
                     driveInformations = listOf(
                         "오늘의 팁: 브레이크 부드럽게 밟는 법",
@@ -63,7 +51,26 @@ class HomeViewModel @Inject constructor(
     }
 
     fun handleSearch(selectedQuery: String) {
-        _uiState.update { it.copy(query = selectedQuery, isSearchMode = false) }
+        viewModelScope.launch {
+            try {
+                val response = kakaoLocalApiService.getAddressFromQuery(selectedQuery)
+                response.documents.firstOrNull()?.let { document ->
+                    _uiState.update {
+                        it.copy(
+                            query = selectedQuery,
+                            isSearchMode = false,
+                            navigationLat = document.y,
+                            navigationLng = document.x,
+                            navigationPlaceName = document.address_name
+                        )
+                    }
+                } ?: run {
+                    // 검색 결과 없음 처리
+                }
+            } catch (e: Exception) {
+                // 네트워크 에러 등 처리
+            }
+        }
     }
 
     fun updateDriveScore(score: Int) {
@@ -71,14 +78,43 @@ class HomeViewModel @Inject constructor(
     }
 
     fun deleteSearchHistoryItem(item: String) {
-        _uiState.update { current ->
-            current.copy(
-                searchHistory = current.searchHistory.filterNot { it == item }
-            )
+        _uiState.update {
+            it.copy(searchHistory = it.searchHistory.filterNot { it == item })
         }
-//        viewModelScope.launch {
-//            deleteSearchHistoryItemUseCase(item)
-//        }
     }
 
+    fun geocode(address: String, onResult: (AddressDocument?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                // 로그: API 요청 시작
+                Log.d("NaviDebug", "📡 geocode() 호출됨 - address: $address")
+
+                val response = kakaoLocalApiService.getAddressFromQuery(address)
+
+                val document = response.documents.firstOrNull()
+
+                if (document != null) {
+                    Log.d("NaviDebug", "✅ 주소 변환 성공: ${document.address_name}, (${document.y}, ${document.x})")
+                } else {
+                    Log.w("NaviDebug", "⚠️ 주소 결과 없음")
+                }
+
+                onResult(document)
+
+            } catch (e: Exception) {
+                Log.e("NaviDebug", "❌ 주소 변환 실패 - ${e.localizedMessage}", e)
+                onResult(null)
+            }
+        }
+    }
+
+    fun addSearchHistory(query: String) {
+        _uiState.update {
+            if (query.isNotBlank() && !it.searchHistory.contains(query)) {
+                it.copy(searchHistory = listOf(query) + it.searchHistory)
+            } else {
+                it
+            }
+        }
+    }
 }

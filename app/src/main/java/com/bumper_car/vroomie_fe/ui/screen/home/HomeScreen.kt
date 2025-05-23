@@ -1,5 +1,16 @@
 package com.bumper_car.vroomie_fe.ui.screen.home
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,6 +57,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -55,9 +67,23 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
+import com.bumper_car.vroomie_fe.ui.screen.drive.CameraGuideActivity
+import com.bumper_car.vroomie_fe.ui.screen.drive.NaviActivity
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import org.bson.AbstractBsonWriter
+
+private fun convertWgsToTm(lat: Double, lon: Double): Pair<Int, Int> {
+    val x = (lon * 20037508.34 / 180.0).toInt()
+    val y = Math.log(Math.tan((90.0 + lat) * Math.PI / 360.0)) / (Math.PI / 180.0)
+    val yMeters = (y * 20037508.34 / 180.0).toInt()
+    return Pair(x, yMeters)
+}
 
 @Composable
 fun HomeScreen(
@@ -68,6 +94,7 @@ fun HomeScreen(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
 
     val driveScoreLevel = when {
         uiState.driveScore < 20 -> 1
@@ -118,24 +145,13 @@ fun HomeScreen(
     ) {
         // 검색 모드
         if (uiState.isSearchMode) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                 Spacer(modifier = Modifier.height(40.dp))
 
-                // 검색 바
                 TextField(
                     value = uiState.query,
                     onValueChange = { viewModel.onQueryChange(it) },
-                    placeholder = {
-                        Text(
-                            text = "어디로 갈까요?",
-                            color = Color(0xFFD9D9D9),
-                            fontSize = 18.sp
-                        )
-                    },
+                    placeholder = { Text("어디로 갈까요?", color = Color(0xFFD9D9D9), fontSize = 18.sp) },
                     leadingIcon = {
                         IconButton(onClick = {
                             viewModel.onQueryChange("")
@@ -143,107 +159,108 @@ fun HomeScreen(
                             focusManager.clearFocus()
                             keyboardController?.hide()
                         }) {
-                            Icon(
-                                painter = painterResource(R.drawable.icon_back),
-                                contentDescription = "뒤로가기"
-                            )
+                            Icon(painter = painterResource(R.drawable.icon_back), contentDescription = "뒤로가기")
                         }
                     },
                     singleLine = true,
                     shape = RoundedCornerShape(40.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 8.dp)
+                    modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)
                         .border(1.5.dp, Color(0xFF0064FF), RoundedCornerShape(40.dp))
-                        .background(Color.White, RoundedCornerShape(40.dp))
-                        .clip(RoundedCornerShape(40.dp))
+                        .background(Color.White, RoundedCornerShape(40.dp)).clip(RoundedCornerShape(40.dp))
                         .focusRequester(focusRequester),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
                         cursorColor = Color.Black,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(
                         onSearch = {
-                            viewModel.handleSearch(uiState.query)
                             focusManager.clearFocus()
                             keyboardController?.hide()
+                            Log.d("HomeScreen", "🔍 검색 실행: ${uiState.query}")
+
+                            viewModel.geocode(uiState.query) { result ->
+                                result?.let { doc ->
+                                    viewModel.addSearchHistory(uiState.query) // ✅ 검색 성공 시에만 저장
+
+                                    val lat = doc.y.toDoubleOrNull()
+                                    val lon = doc.x.toDoubleOrNull()
+                                    val name = doc.address_name
+                                    if (lat != null && lon != null) {
+                                        val intent = Intent(context, CameraGuideActivity::class.java).apply {
+                                            putExtra("lat", lat)
+                                            putExtra("lon", lon)
+                                            putExtra("name", name)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            }
                         }
                     )
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // 최근 검색어
                 LazyColumn {
                     items(uiState.searchHistory) { history ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 12.dp, horizontal = 16.dp)
-                                .clickable { navController.navigate("drive") },
+                                .clickable {
+                                    Log.d("HomeScreen", "🕘 히스토리 클릭됨: $history")
+                                    viewModel.geocode(history) { document ->
+                                        document?.let {
+                                            val lat = it.y.toDoubleOrNull()
+                                            val lon = it.x.toDoubleOrNull()
+                                            val name = it.address_name
+                                            if (lat != null && lon != null) {
+                                                val intent = Intent(context, CameraGuideActivity::class.java).apply {
+                                                    putExtra("lat", lat)
+                                                    putExtra("lon", lon)
+                                                    putExtra("name", name)
+                                                }
+                                                context.startActivity(intent)
+                                            } else {
+                                                Toast.makeText(context, "위치 정보 파싱 실패", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                },
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(history, fontSize = 18.sp, color = Color.DarkGray)
                             IconButton(onClick = { viewModel.deleteSearchHistoryItem(history) }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.icon_delete),
-                                    contentDescription = "삭제"
-                                )
+                                Icon(painter = painterResource(R.drawable.icon_delete), contentDescription = "삭제")
                             }
                         }
                     }
                 }
             }
         } else {
-            // 검색 모드 X
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // 검색
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 검색 바
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextField(
                         value = uiState.query,
                         onValueChange = { viewModel.onQueryChange(it) },
-                        placeholder = {
-                            Text(
-                                text = "어디로 갈까요?",
-                                color = Color(0xFFD9D9D9),
-                                fontSize = 18.sp
-                            )
-                        },
+                        placeholder = { Text("어디로 갈까요?", color = Color(0xFFD9D9D9), fontSize = 18.sp) },
                         singleLine = true,
                         shape = RoundedCornerShape(40.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
+                        modifier = Modifier.weight(1f).height(56.dp)
                             .border(1.5.dp, Color(0xFF0064FF), RoundedCornerShape(40.dp))
                             .background(Color.White, RoundedCornerShape(40.dp))
                             .clip(RoundedCornerShape(40.dp))
-                            .onFocusChanged {
-                                if (it.isFocused) viewModel.toggleSearchMode(true)
-                            },
+                            .onFocusChanged { if (it.isFocused) viewModel.toggleSearchMode(true) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
                             cursorColor = Color.Black,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
@@ -252,27 +269,65 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    //자유 주행
+                    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
                     IconButton(
                         onClick = {
-                            navController.navigate("drive")
+                            val activity = context as? Activity
+                            if (activity == null) {
+                                Toast.makeText(context, "Activity context가 필요합니다.", Toast.LENGTH_SHORT).show()
+                                return@IconButton
+                            }
+
+                            if (ActivityCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.ACCESS_FINE_LOCATION
+                                ) != PackageManager.PERMISSION_GRANTED &&
+                                ActivityCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                ActivityCompat.requestPermissions(
+                                    activity,
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ),
+                                    1001 // requestCode, 필요시 상수 정의 가능
+                                )
+                                return@IconButton
+                            }
+
+                            fusedClient.getCurrentLocation(
+                                Priority.PRIORITY_HIGH_ACCURACY,
+                                null
+                            ).addOnSuccessListener { location ->
+                                if (location != null) {
+                                    val intent = Intent(context, NaviActivity::class.java).apply {
+                                        putExtra("latitude", location.latitude.toString())
+                                        putExtra("longitude", location.longitude.toString())
+                                        putExtra("name", "현재 위치")
+                                    }
+                                    context.startActivity(intent)
+                                } else {
+                                    Toast.makeText(context, "현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
+                                }
+                            }.addOnFailureListener {
+                                Toast.makeText(context, "위치 획득 실패: ${it.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            }
                         },
-                        modifier = Modifier
-                            .size(56.dp)
-                            .shadow(4.dp, shape = CircleShape, clip = false)
-                            .clip(CircleShape)
-                            .background(Color.White)
+                        modifier = Modifier.size(56.dp).shadow(4.dp, shape = CircleShape).clip(CircleShape).background(Color.White)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.icon_gps),
                             contentDescription = "자유 주행",
                             tint = Color.Unspecified,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .padding(end = 4.dp, top = 4.dp)
+                            modifier = Modifier.size(44.dp).padding(end = 4.dp, top = 4.dp)
                         )
                     }
                 }
+
 
                 Spacer(modifier = Modifier.height(60.dp))
 
@@ -320,11 +375,11 @@ fun HomeScreen(
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(vertical = 32.dp)
-                            ) {
+                        ) {
                             Text(
                                 text = "운전점수",
                                 fontSize = 24.sp
-                                )
+                            )
                             Text(
                                 text = uiState.driveScore.toString(),
                                 fontSize = 28.sp,
