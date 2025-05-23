@@ -72,6 +72,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
+import com.bumper_car.vroomie_fe.ui.screen.drive.CameraGuideActivity
 import com.bumper_car.vroomie_fe.ui.screen.drive.NaviActivity
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -189,12 +190,12 @@ fun HomeScreen(
                                         Log.d("NaviDebug", "좌표 변환 완료 → xGoal: $lat, yGoal: $lon, name: $name")
 
                                         val intent =
-                                            Intent(context, NaviActivity::class.java).apply {
+                                            Intent(context, CameraGuideActivity::class.java).apply {
                                                 putExtra("lat", lat)
                                                 putExtra("lon", lon)
                                                 putExtra("name", name)
                                             }
-                                        Log.d("NaviDebug", "Intent 생성 완료 → NaviActivity로 이동 시작")
+                                        Log.d("NaviDebug", "Intent 생성 완료 → CameraGuideActivity로 이동 시작")
 
                                         context.startActivity(intent)
                                     }
@@ -220,7 +221,7 @@ fun HomeScreen(
                                             val lon = it.x.toDoubleOrNull()
                                             val name = it.address_name
                                             if (lat != null && lon != null) {
-                                                val intent = Intent(context, NaviActivity::class.java).apply {
+                                                val intent = Intent(context, CameraGuideActivity::class.java).apply {
                                                     putExtra("lat", lat)
                                                     putExtra("lon", lon)
                                                     putExtra("name", name)
