@@ -1,5 +1,6 @@
 package com.bumper_car.vroomie_fe.ui.screen.drive
 
+import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
@@ -67,14 +68,13 @@ class NaviActivity : AppCompatActivity(),
             return
         }
 
-        // ✅ 목적지 TM 좌표 변환
-        val katecPoint = KNSDK.convertWGS84ToKATEC(lon, lat);
+        // 목적지 TM 좌표 변환
+        val katecPoint = KNSDK.convertWGS84ToKATEC(lon, lat)
         val goalPoi = KNPOI(placeName, katecPoint.x.toInt(), katecPoint.y.toInt(), placeName)
 
-
-        // ✅ 현재 위치 권한 확인 후 시작점 설정
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        // 현재 위치 권한 확인 후 시작점 설정
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
         ) {
             Toast.makeText(this, "위치 권한이 없습니다.", Toast.LENGTH_SHORT).show()
             return
@@ -87,11 +87,16 @@ class NaviActivity : AppCompatActivity(),
                     val katecPoint = KNSDK.convertWGS84ToKATEC(location.longitude, location.latitude)
                     val startPoi = KNPOI("현재 위치", katecPoint.x.toInt(), katecPoint.y.toInt(), "출발지")
 
-                    if (Vroomie_FEApplication.knsdk.sharedGuidance() == null) {
+                    val guidance = Vroomie_FEApplication.knsdk.sharedGuidance()
+
+                    if (guidance == null) {
                         Toast.makeText(this, "SDK 초기화 안됨", Toast.LENGTH_SHORT).show()
                         Log.e("NaviActivity", "KNSDK not initialized")
                         return@addOnSuccessListener
                     }
+
+                    // ✅ 기존 안내 중단
+                    guidance.stop()
 
                     Vroomie_FEApplication.knsdk.makeTripWithStart(
                         aStart = startPoi,
