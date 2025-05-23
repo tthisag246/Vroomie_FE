@@ -8,11 +8,14 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.bumper_car.vroomie_fe.R
 import com.bumper_car.vroomie_fe.Vroomie_FEApplication
+import com.bumper_car.vroomie_fe.util.CameraStreamer
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.kakaomobility.knsdk.KNRoutePriority
@@ -41,12 +44,15 @@ class NaviActivity : AppCompatActivity(),
     KNGuidance_CitsGuideDelegate {
 
     private lateinit var naviView: KNNaviView
+    private lateinit var previewView: PreviewView
+    private lateinit var cameraStreamer: CameraStreamer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_navi)
 
         naviView = findViewById(R.id.navi_view)
+        previewView = findViewById(R.id.preview_view)
 
         ViewCompat.setOnApplyWindowInsetsListener(naviView) { view, insets ->
             val navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
@@ -59,6 +65,14 @@ class NaviActivity : AppCompatActivity(),
             decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         }
 
+        cameraStreamer = CameraStreamer(
+            context = this,
+            previewView = previewView,
+            wsUrl = "ws://192.168.219.107:8080"
+        )
+        cameraStreamer.startWebSocket()
+        cameraStreamer.bindCameraWithStream(this)
+
         val lat = intent.getDoubleExtra("lat", -1.0)
         val lon = intent.getDoubleExtra("lon", -1.0)
         val placeName = intent.getStringExtra("name") ?: "목적지"
@@ -68,11 +82,9 @@ class NaviActivity : AppCompatActivity(),
             return
         }
 
-        // 목적지 TM 좌표 변환
         val katecPoint = KNSDK.convertWGS84ToKATEC(lon, lat)
         val goalPoi = KNPOI(placeName, katecPoint.x.toInt(), katecPoint.y.toInt(), placeName)
 
-        // 현재 위치 권한 확인 후 시작점 설정
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -95,7 +107,6 @@ class NaviActivity : AppCompatActivity(),
                         return@addOnSuccessListener
                     }
 
-                    // ✅ 기존 안내 중단
                     guidance.stop()
 
                     Vroomie_FEApplication.knsdk.makeTripWithStart(
