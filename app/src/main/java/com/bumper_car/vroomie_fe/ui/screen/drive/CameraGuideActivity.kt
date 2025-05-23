@@ -82,7 +82,7 @@ class CameraGuideActivity : ComponentActivity() {
         cameraStreamer = CameraStreamer(
             context = this,
             previewView = previewView,
-            wsUrl = "ws://192.168.219.107:8080" // 🛠 실제 서버 주소로 변경
+            wsUrl = "ws://IP_ADDRESS:8080" // 🛠 실제 서버 주소로 변경
         )
         cameraStreamer.startPreviewOnly(this) // 🔹 미리보기만 먼저 실행
     }

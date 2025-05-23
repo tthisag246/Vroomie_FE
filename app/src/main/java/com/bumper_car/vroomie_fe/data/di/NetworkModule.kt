@@ -22,7 +22,7 @@ object NetworkModule {
     fun provideOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor { chain ->
-                val authKey = "KakaoAK 1c17271611d8871b8e1dd96d3847c137"
+                val authKey = "KakaoAK REST_API_KEY"
                 val request = chain.request().newBuilder()
                     .addHeader("Authorization", authKey)
                     .build()

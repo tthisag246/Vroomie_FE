@@ -68,7 +68,7 @@ class NaviActivity : AppCompatActivity(),
         cameraStreamer = CameraStreamer(
             context = this,
             previewView = previewView,
-            wsUrl = "ws://192.168.219.107:8080"
+            wsUrl = "ws://IP_ADDRESS:8080"
         )
         cameraStreamer.startWebSocket()
         cameraStreamer.bindCameraWithStream(this)
