@@ -107,4 +107,14 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun addSearchHistory(query: String) {
+        _uiState.update {
+            if (query.isNotBlank() && !it.searchHistory.contains(query)) {
+                it.copy(searchHistory = listOf(query) + it.searchHistory)
+            } else {
+                it
+            }
+        }
+    }
 }

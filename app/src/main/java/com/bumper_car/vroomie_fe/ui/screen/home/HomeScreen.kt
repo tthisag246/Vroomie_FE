@@ -181,22 +181,20 @@ fun HomeScreen(
                             focusManager.clearFocus()
                             keyboardController?.hide()
                             Log.d("HomeScreen", "🔍 검색 실행: ${uiState.query}")
+
                             viewModel.geocode(uiState.query) { result ->
                                 result?.let { doc ->
+                                    viewModel.addSearchHistory(uiState.query) // ✅ 검색 성공 시에만 저장
+
                                     val lat = doc.y.toDoubleOrNull()
                                     val lon = doc.x.toDoubleOrNull()
                                     val name = doc.address_name
                                     if (lat != null && lon != null) {
-                                        Log.d("NaviDebug", "좌표 변환 완료 → xGoal: $lat, yGoal: $lon, name: $name")
-
-                                        val intent =
-                                            Intent(context, CameraGuideActivity::class.java).apply {
-                                                putExtra("lat", lat)
-                                                putExtra("lon", lon)
-                                                putExtra("name", name)
-                                            }
-                                        Log.d("NaviDebug", "Intent 생성 완료 → CameraGuideActivity로 이동 시작")
-
+                                        val intent = Intent(context, CameraGuideActivity::class.java).apply {
+                                            putExtra("lat", lat)
+                                            putExtra("lon", lon)
+                                            putExtra("name", name)
+                                        }
                                         context.startActivity(intent)
                                     }
                                 }
