@@ -6,4 +6,9 @@ data class HomeUiState(
     val driveScore: Int = 63,
     val searchHistory: List<String> = listOf(),
     val driveInformations: List<String> = listOf(),
+
+    // 목적지 정보
+    val navigationLat: String? = null,
+    val navigationLng: String? = null,
+    val navigationPlaceName: String? = null
 )
