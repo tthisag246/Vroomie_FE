@@ -1,6 +1,7 @@
 package com.bumper_car.vroomie_fe.data.di
 
 import android.util.Log
+import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoLocalApiService
 import dagger.Module
 import dagger.Provides
@@ -22,7 +23,7 @@ object NetworkModule {
     fun provideOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor { chain ->
-                val authKey = "KakaoAK REST_API_KEY"
+                val authKey = "KakaoAK ${BuildConfig.KAKAO_REST_API_KEY}"
                 val request = chain.request().newBuilder()
                     .addHeader("Authorization", authKey)
                     .build()

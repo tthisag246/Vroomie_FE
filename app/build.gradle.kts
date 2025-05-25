@@ -1,12 +1,19 @@
-plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.android.ksp)
-    alias(libs.plugins.hilt.android)
-    id("kotlin-kapt")
-    id("dagger.hilt.android.plugin")
-}
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
+        plugins {
+            alias(libs.plugins.android.application)
+            alias(libs.plugins.kotlin.android)
+            alias(libs.plugins.kotlin.compose)
+            alias(libs.plugins.kotlin.android.ksp)
+            alias(libs.plugins.hilt.android)
+            id("kotlin-kapt")
+            id("dagger.hilt.android.plugin")
+        }
+
+val localProperties = gradleLocalProperties(rootDir, providers)
+val kakaoAppKey = localProperties.getProperty("KAKAO_APP_KEY") ?: ""
+val kakaoRestApiKey = localProperties.getProperty("KAKAO_REST_API_KEY") ?: ""
+val serverIPAddress = localProperties.getProperty("SERVER_IP_ADDRESS") ?: ""
 
 android {
     namespace = "com.bumper_car.vroomie_fe"
@@ -18,8 +25,11 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "KAKAO_APP_KEY", "\"$kakaoAppKey\"")
+        buildConfigField("String", "KAKAO_REST_API_KEY", "\"$kakaoRestApiKey\"")
+        buildConfigField("String", "SERVER_IP_ADDRESS", "\"$serverIPAddress\"")
     }
 
     buildTypes {
@@ -44,6 +54,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -63,7 +74,6 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4")
 
-    // CameraX core library
     implementation("androidx.camera:camera-core:1.3.1")
     implementation("androidx.camera:camera-camera2:1.3.1")
     implementation("androidx.camera:camera-lifecycle:1.3.1")
@@ -91,8 +101,6 @@ dependencies {
     implementation(libs.compose.markdown)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.androidx.camera.lifecycle)
 
     ksp(libs.hilt.compiler)
 

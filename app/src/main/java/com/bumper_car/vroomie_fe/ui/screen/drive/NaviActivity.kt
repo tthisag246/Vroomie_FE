@@ -13,6 +13,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.R
 import com.bumper_car.vroomie_fe.Vroomie_FEApplication
 import com.bumper_car.vroomie_fe.util.CameraStreamer
@@ -68,7 +69,7 @@ class NaviActivity : AppCompatActivity(),
         cameraStreamer = CameraStreamer(
             context = this,
             previewView = previewView,
-            wsUrl = "ws://IP_ADDRESS:8080"
+            wsUrl = "ws://${BuildConfig.SERVER_IP_ADDRESS}:8080"
         )
         cameraStreamer.startWebSocket()
         cameraStreamer.bindCameraWithStream(this)
