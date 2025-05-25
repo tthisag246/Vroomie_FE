@@ -12,6 +12,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.R
 import com.bumper_car.vroomie_fe.util.CameraStreamer
 
@@ -82,7 +83,7 @@ class CameraGuideActivity : ComponentActivity() {
         cameraStreamer = CameraStreamer(
             context = this,
             previewView = previewView,
-            wsUrl = "ws://IP_ADDRESS:8080" // 🛠 실제 서버 주소로 변경
+            wsUrl = "ws://${BuildConfig.SERVER_IP_ADDRESS}:8080" // 🛠 실제 서버 주소로 변경
         )
         cameraStreamer.startPreviewOnly(this) // 🔹 미리보기만 먼저 실행
     }

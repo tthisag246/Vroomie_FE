@@ -24,7 +24,7 @@ class Vroomie_FEApplication : Application() {
             )
 
             initializeWithAppKey(
-                "APP_KEY", // 예: "1a2b3c4d5e..."
+                BuildConfig.KAKAO_APP_KEY,
                 "1.0.0",
                 "test-user", // 실제 유저 ID
                 KNLanguageType.KNLanguageType_KOREAN
