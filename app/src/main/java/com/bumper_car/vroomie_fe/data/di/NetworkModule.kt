@@ -2,7 +2,7 @@ package com.bumper_car.vroomie_fe.data.di
 
 import android.util.Log
 import com.bumper_car.vroomie_fe.BuildConfig
-import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoLocalApiService
+import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoNaviService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,7 +47,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideKakaoLocalApiService(retrofit: Retrofit): KakaoLocalApiService {
-        return retrofit.create(KakaoLocalApiService::class.java)
+    fun provideKakaoLocalApiService(retrofit: Retrofit): KakaoNaviService {
+        return retrofit.create(KakaoNaviService::class.java)
     }
 }

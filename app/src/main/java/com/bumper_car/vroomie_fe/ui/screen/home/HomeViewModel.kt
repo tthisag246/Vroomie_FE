@@ -1,12 +1,10 @@
 package com.bumper_car.vroomie_fe.ui.screen.home
 
-import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoLocalApiService
+import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoNaviService
 import com.bumper_car.vroomie_fe.data.remote.kakao.model.AddressDocument
-import com.bumper_car.vroomie_fe.ui.screen.drive.NaviActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +15,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val kakaoLocalApiService: KakaoLocalApiService
+    private val kakaoNaviService: KakaoNaviService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -53,7 +51,7 @@ class HomeViewModel @Inject constructor(
     fun handleSearch(selectedQuery: String) {
         viewModelScope.launch {
             try {
-                val response = kakaoLocalApiService.getAddressFromQuery(selectedQuery)
+                val response = kakaoNaviService.getAddressFromQuery(selectedQuery)
                 response.documents.firstOrNull()?.let { document ->
                     _uiState.update {
                         it.copy(
@@ -89,7 +87,7 @@ class HomeViewModel @Inject constructor(
                 // 로그: API 요청 시작
                 Log.d("NaviDebug", "📡 geocode() 호출됨 - address: $address")
 
-                val response = kakaoLocalApiService.getAddressFromQuery(address)
+                val response = kakaoNaviService.getAddressFromQuery(address)
 
                 val document = response.documents.firstOrNull()
 
