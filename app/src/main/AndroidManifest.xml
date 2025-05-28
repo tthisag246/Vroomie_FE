@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- 권한 설정 -->
@@ -25,7 +26,7 @@
         <activity
             android:name=".ui.screen.drive.NaviActivity"
             android:configChanges="orientation"
-            android:theme="@style/AppTheme"/>
+            android:theme="@style/AppTheme" />
 
         <activity
             android:name=".ui.screen.drive.CameraGuideActivity"
@@ -36,9 +37,19 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.App.Starting">
+
+            <!-- 기본 앱 시작용 -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- 카카오 로그인 리디렉션 처리용 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="vroomie" android:host="login-success"/>
             </intent-filter>
         </activity>
 
