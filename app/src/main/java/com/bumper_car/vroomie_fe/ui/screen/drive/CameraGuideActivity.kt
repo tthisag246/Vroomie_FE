@@ -63,8 +63,6 @@ class CameraGuideActivity : ComponentActivity() {
 
         // 안내 시작 버튼 눌렀을 때 → 웹소켓 + 스트리밍 시작
         button.setOnClickListener {
-            cameraStreamer.startStreaming(this)
-
             val lat = intent.getDoubleExtra("lat", -1.0)
             val lon = intent.getDoubleExtra("lon", -1.0)
             val name = intent.getStringExtra("name")

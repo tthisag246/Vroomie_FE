@@ -19,6 +19,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 
 class CameraStreamer(
     private val context: Context,
@@ -27,6 +28,11 @@ class CameraStreamer(
 ) {
     private lateinit var webSocket: WebSocket
     private val executor = Executors.newSingleThreadExecutor()
+
+    private val lastSentTimeMillis = AtomicLong(0)
+    private val targetFrameIntervalMillis = 500L  // 2 FPS → 500ms 마다 1프레임
+
+
 
     fun startWebSocket() {
         val client = OkHttpClient()
@@ -38,6 +44,7 @@ class CameraStreamer(
 
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                 Log.e("CameraStreamer", "WebSocket 에러: ${t.message}")
+                t.printStackTrace()
             }
         })
     }
@@ -74,13 +81,20 @@ class CameraStreamer(
                 .build()
                 .also {
                     it.setAnalyzer(executor) { imageProxy ->
-                        val bitmap = imageProxy.toBitmap()
-                        val baos = ByteArrayOutputStream()
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
-                        val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-                        Log.d("CameraStreamer", "프레임 전송 중...")
+                        val currentTimeMillis = System.currentTimeMillis()
+                        val lastTime = lastSentTimeMillis.get()
 
-                        webSocket.send(base64)
+                        if (currentTimeMillis - lastTime >= targetFrameIntervalMillis) {
+                            // 업데이트
+                            lastSentTimeMillis.set(currentTimeMillis)
+                            val bitmap = imageProxy.toBitmap()
+                            val baos = ByteArrayOutputStream()
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+                            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                            Log.d("CameraStreamer", "프레임 전송 중...")
+
+                            webSocket.send(base64)
+                        }
                         imageProxy.close()
                     }
                 }
