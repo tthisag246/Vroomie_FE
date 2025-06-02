@@ -45,6 +45,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun DriveHistoryDetailScreen(
@@ -55,7 +58,29 @@ fun DriveHistoryDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(id) {
-        viewModel.loadDriveHistoryById(id)
+        viewModel.fetchDriveHistory(id)
+    }
+
+    fun String.toDateFormat(pattern: String = "yyyy.MM.dd"): String {
+        return try {
+            if (this.isBlank()) return "-"
+            val parsed = LocalDateTime.parse(this)
+            parsed.format(DateTimeFormatter.ofPattern(pattern))
+        } catch (e: Exception) {
+            "-"
+        }
+    }
+
+    fun Int.toHourMinuteFormat(): String {
+        val hours = this / 60
+        val minutes = this % 60
+
+        return when {
+            hours > 0 && minutes > 0 -> "${hours}시간 ${minutes}분"
+            hours > 0 -> "${hours}시간"
+            minutes > 0 -> "${minutes}분"
+            else -> "0분"
+        }
     }
 
     Scaffold(
@@ -139,19 +164,19 @@ fun DriveHistoryDetailScreen(
                                 ) {
                                     Row {
                                         TableCell("응시일자", true, Modifier.weight(3f))
-                                        TableCell(uiState.date, false, Modifier.weight(4f))
+                                        TableCell(uiState.startAt.toDateFormat(), false, Modifier.weight(4f))
                                     }
                                     Row {
                                         TableCell("주행거리", true, Modifier.weight(3f))
                                         TableCell(
-                                            uiState.distance.toString(),
+                                            uiState.distance.toString() + "km",
                                             false,
                                             Modifier.weight(4f)
                                         )
                                     }
                                     Row {
                                         TableCell("주행시간", true, Modifier.weight(3f))
-                                        TableCell(uiState.duration, false, Modifier.weight(4f))
+                                        TableCell(uiState.duration.toHourMinuteFormat(), false, Modifier.weight(4f))
                                     }
                                 }
                                 Box(

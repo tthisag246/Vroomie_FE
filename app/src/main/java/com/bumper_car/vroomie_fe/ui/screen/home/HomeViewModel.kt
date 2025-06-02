@@ -3,8 +3,11 @@ package com.bumper_car.vroomie_fe.ui.screen.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoNaviService
+import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoNaviApi
 import com.bumper_car.vroomie_fe.data.remote.kakao.model.AddressDocument
+import com.bumper_car.vroomie_fe.domain.usecase.GetDriveTipsTitleUseCase
+import com.bumper_car.vroomie_fe.domain.usecase.GetUserScoreUseCase
+import com.bumper_car.vroomie_fe.ui.screen.drivetip.mapper.toDriveTipTitleUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,29 +18,17 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val kakaoNaviService: KakaoNaviService
+    private val getDriveTipsTitleUseCase: GetDriveTipsTitleUseCase,
+    private val getUserScoreUseCase: GetUserScoreUseCase,
+    private val kakaoNaviApi: KakaoNaviApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    driveScore = 63,
-                    searchHistory = listOf(
-                        "중앙대학교", "강남역", "서울역", "잠실 롯데타워", "노들섬"
-                    ),
-                    driveInformations = listOf(
-                        "오늘의 팁: 브레이크 부드럽게 밟는 법",
-                        "셀프 주유하기 도전!",
-                        "차 검검은 얼마나 자주 받아야 할까?",
-                        "고속도로 주행 안전수칙 5가지"
-                    )
-                )
-            }
-        }
+    fun refreshData() {
+        fetchUserScore()
+        fetchDriveTips()
     }
 
     fun onQueryChange(newQuery: String) {
@@ -51,7 +42,7 @@ class HomeViewModel @Inject constructor(
     fun handleSearch(selectedQuery: String) {
         viewModelScope.launch {
             try {
-                val response = kakaoNaviService.getAddressFromQuery(selectedQuery)
+                val response = kakaoNaviApi.getAddressFromQuery(selectedQuery)
                 response.documents.firstOrNull()?.let { document ->
                     _uiState.update {
                         it.copy(
@@ -71,10 +62,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun updateDriveScore(score: Int) {
-        _uiState.update { it.copy(driveScore = score) }
-    }
-
     fun deleteSearchHistoryItem(item: String) {
         _uiState.update {
             it.copy(searchHistory = it.searchHistory.filterNot { it == item })
@@ -87,7 +74,7 @@ class HomeViewModel @Inject constructor(
                 // 로그: API 요청 시작
                 Log.d("NaviDebug", "📡 geocode() 호출됨 - address: $address")
 
-                val response = kakaoNaviService.getAddressFromQuery(address)
+                val response = kakaoNaviApi.getAddressFromQuery(address)
 
                 val document = response.documents.firstOrNull()
 
@@ -112,6 +99,29 @@ class HomeViewModel @Inject constructor(
                 it.copy(searchHistory = listOf(query) + it.searchHistory)
             } else {
                 it
+            }
+        }
+    }
+
+    private fun fetchUserScore() {
+        viewModelScope.launch {
+            try {
+                val score = getUserScoreUseCase()
+                _uiState.value = _uiState.value.copy(driveScore = score)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun fetchDriveTips() {
+        viewModelScope.launch {
+            try {
+                val tips = getDriveTipsTitleUseCase()
+                val tipItems = tips.map { it.toDriveTipTitleUiState() }
+                _uiState.value = _uiState.value.copy(driveTips = tipItems)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

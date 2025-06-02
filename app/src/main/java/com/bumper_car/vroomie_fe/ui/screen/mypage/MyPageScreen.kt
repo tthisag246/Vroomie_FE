@@ -14,25 +14,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -43,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
-import com.bumper_car.vroomie_fe.ui.screen.home.HomeViewModel
 
 @Composable
 fun MyPageScreen(
@@ -51,6 +47,10 @@ fun MyPageScreen(
     viewModel: MyPageViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchMyInfo()
+    }
 
     Scaffold(
         topBar = {
@@ -116,11 +116,11 @@ fun MyPageScreen(
                         ) {
                             Image(
                                 painter = painterResource(
-                                    when (uiState.level) {
-                                        1 -> R.drawable.drive_score_level_1
-                                        2 -> R.drawable.drive_score_level_2
-                                        3 -> R.drawable.drive_score_level_3
-                                        4 -> R.drawable.drive_score_level_4
+                                    when {
+                                        uiState.userScore < 20 -> R.drawable.drive_score_level_1
+                                        uiState.userScore < 40 -> R.drawable.drive_score_level_2
+                                        uiState.userScore < 60 -> R.drawable.drive_score_level_3
+                                        uiState.userScore < 80 -> R.drawable.drive_score_level_4
                                         else -> R.drawable.drive_score_level_5
                                     }
                                 ),
@@ -135,17 +135,17 @@ fun MyPageScreen(
 
                             Column {
                                 Text(
-                                    uiState.nickname,
+                                    uiState.userName,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("차 모델 | ${uiState.carModel}", fontSize = 14.sp)
                                 Text(
-                                    "하이패스 | ${if (uiState.hasHiPass) "보유 중" else "미보유"}",
+                                    "하이패스 | ${if (uiState.carHipass == true) "보유 중" else "미보유"}",
                                     fontSize = 14.sp
                                 )
-                                Text("${uiState.carType} | ${uiState.fuelType}", fontSize = 14.sp)
+                                Text("${uiState.carType} | ${uiState.carFuel}", fontSize = 14.sp)
                             }
                         }
                     }

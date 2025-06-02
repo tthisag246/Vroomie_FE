@@ -65,6 +65,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -91,6 +92,11 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
+
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -104,8 +110,8 @@ fun HomeScreen(
         else -> 5
     }
 
-    val driveScorePrevLevel = (driveScoreLevel - 1).coerceAtLeast(1)
-    val driveScoreNexyLevel = (driveScoreLevel + 1).coerceAtMost(5)
+    val driveScorePrevLevel = (driveScoreLevel - 1)
+    val driveScoreNextLevel = (driveScoreLevel + 1)
 
     fun getDriveLevelImage(level: Int): Int? = when (level) {
         1 -> R.drawable.drive_score_level_1
@@ -352,7 +358,7 @@ fun HomeScreen(
                                 modifier = Modifier.size(100.dp)
                             )
                         }
-                        getDriveLevelImage(driveScoreNexyLevel)?.let {
+                        getDriveLevelImage(driveScoreNextLevel)?.let {
                             Image(
                                 painter = painterResource(it),
                                 contentDescription = "이후 레벨",
@@ -421,16 +427,18 @@ fun HomeScreen(
                             color = Color.Black
                         )
 
-                        uiState.driveInformations.forEachIndexed { index, info ->
+                        uiState.driveTips.forEach { tip ->
                             Text(
-                                text = info,
+                                text = tip.title,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 style = TextStyle(textDecoration = TextDecoration.Underline),
                                 color = Color.DarkGray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .padding(top = 8.dp)
-                                    .clickable { navController.navigate("drive_tip/${index}") }
+                                    .clickable { navController.navigate("drive_tip/${tip.tipId}") }
                             )
                         }
                     }

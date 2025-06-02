@@ -1,10 +1,10 @@
 package com.bumper_car.vroomie_fe.ui.screen.mypage
 
 data class MyPageUiState(
-    val nickname: String = "",
+    val userName: String = "",
     val carModel: String = "",
-    val carType: String = "",
-    val hasHiPass: Boolean = false,
-    val fuelType: String = "",
-    val level: Int = 1
+    val carHipass: Boolean? = false,
+    val carType: String? = "",
+    val carFuel: String? = "",
+    val userScore: Int = 0
 )
