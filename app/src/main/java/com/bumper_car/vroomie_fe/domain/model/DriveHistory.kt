@@ -1,12 +1,13 @@
 package com.bumper_car.vroomie_fe.domain.model
 
 data class DriveHistory(
-    val id: Int,
+    val historyId: Int,
+    val startAt: String,
+    val endAt: String,
     val startLocation: String,
     val endLocation: String,
-    val date: String,
     val score: Int,
-    val distance: Int? = null,
+    val distance: Float? = null,
     val duration: Int? = null,
     val laneDeviationLeftCount: Int? = null,
     val laneDeviationRightCount: Int? = null,

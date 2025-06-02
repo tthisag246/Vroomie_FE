@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,9 @@ import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import com.bumper_car.vroomie_fe.R
 import dev.jeziellago.compose.markdowntext.MarkdownText
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun DriveTipDetailScreen(
@@ -48,6 +52,21 @@ fun DriveTipDetailScreen(
     id: Int
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(id) {
+        viewModel.fetchDriveTip(id)
+    }
+
+    fun String.toDateFormat(pattern: String = "yyyy년 MM월 dd일"): String {
+        return try {
+            if (this.isBlank()) return "-"
+            val parsed = LocalDateTime.parse(this)
+            parsed.format(DateTimeFormatter.ofPattern(pattern))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "-"
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -120,7 +139,7 @@ fun DriveTipDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = uiState.date,
+                                text = uiState.createAt.toDateFormat(),
                                 fontSize = 16.sp,
                                 color = Color.White
                             )
