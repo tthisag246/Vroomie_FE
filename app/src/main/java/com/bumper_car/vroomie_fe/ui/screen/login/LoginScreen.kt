@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 
 fun onClickKakaoLoginButton(context: Context) {
     val clientId = "3ce58b28ecb090ff8b53a0a20044a043"
-    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
+    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/login/auth/kakao/callback"
     val url = "https://kauth.kakao.com/oauth/authorize" +
             "?client_id=$clientId" +
             "&redirect_uri=$redirectUri" +
