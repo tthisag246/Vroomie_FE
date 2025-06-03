@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -36,6 +37,10 @@ import com.kakaomobility.knsdk.trip.kntrip.KNTrip
 import com.kakaomobility.knsdk.trip.kntrip.knroute.KNRoute
 import com.kakaomobility.knsdk.ui.view.KNNaviView
 import com.google.android.gms.location.*
+import com.kakaomobility.knsdk.KNRGCode
+import com.kakaomobility.knsdk.guidance.knguidance.routeguide.objects.KNDirection
+import com.kakaomobility.knsdk.guidance.knguidance.voiceguide.KNVoiceCode
+import java.util.Locale
 
 class NaviActivity : AppCompatActivity(),
     KNGuidance_GuideStateDelegate,
@@ -50,10 +55,18 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var cameraStreamer: CameraStreamer
     private lateinit var fusedClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private lateinit var tts: TextToSpeech
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_navi)
+
+        // ✅ TTS 초기화
+        tts = TextToSpeech(this) {
+            if (it == TextToSpeech.SUCCESS) {
+                tts.language = Locale.KOREAN
+            }
+        }
 
         naviView = findViewById(R.id.navi_view)
         previewView = findViewById(R.id.preview_view)
@@ -243,7 +256,29 @@ class NaviActivity : AppCompatActivity(),
         aVoiceGuide: KNGuide_Voice,
         aNewData: MutableList<ByteArray>
     ): Boolean {
-        return naviView.shouldPlayVoiceGuide(aGuidance, aVoiceGuide, aNewData)
+        if (aVoiceGuide.voiceCode == KNVoiceCode.KNVoiceCode_Turn) {
+            val direction = aVoiceGuide.guideObj as? KNDirection ?: return true
+
+            when (direction.rgCode) {
+                KNRGCode.KNRGCode_LeftTurn -> {
+                    tts.speak("좌측 깜빡이를 켜세요. 교차로 내에서는 자기 차선대로 좌회전하세요. 유도선이 있다면 유도선을 따라 회전하세요.", TextToSpeech.QUEUE_FLUSH, null, null)
+                    return false
+                }
+                KNRGCode.KNRGCode_RightTurn -> {
+                    tts.speak("우측 깜빡이를 켜세요. 우회전하기 전, 좌측이나 정면에서 오는 차가 있는지 확인하세요. 보행자가 있는지 확인하세요.", TextToSpeech.QUEUE_FLUSH, null, null)
+                    return false
+                }
+                KNRGCode.KNRGCode_UTurn -> {
+                    tts.speak("좌측 깜빡이를 켜세요. 정면 신호가 좌회전/보행자/직진 신호일 때 유턴하여 3차선으로 들어가세요. 유턴 구간에서는 앞차의 뒤를 따라 순서대로 돌아야 합니다.", TextToSpeech.QUEUE_FLUSH, null, null)
+                    return false
+                }
+                else -> {
+                    Log.d("VoiceGuide", "기타 rgCode: ${direction.rgCode}")
+                }
+            }
+        }
+
+        return true
     }
 
     override fun willPlayVoiceGuide(aGuidance: KNGuidance, aVoiceGuide: KNGuide_Voice) {
