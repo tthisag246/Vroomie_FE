@@ -35,6 +35,7 @@ import com.kakaomobility.knsdk.guidance.knguidance.voiceguide.KNGuide_Voice
 import com.kakaomobility.knsdk.trip.kntrip.KNTrip
 import com.kakaomobility.knsdk.trip.kntrip.knroute.KNRoute
 import com.kakaomobility.knsdk.ui.view.KNNaviView
+import com.google.android.gms.location.*
 
 class NaviActivity : AppCompatActivity(),
     KNGuidance_GuideStateDelegate,
@@ -47,6 +48,8 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var naviView: KNNaviView
     private lateinit var previewView: PreviewView
     private lateinit var cameraStreamer: CameraStreamer
+    private lateinit var fusedClient: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,7 +75,7 @@ class NaviActivity : AppCompatActivity(),
             wsUrl = "ws://${BuildConfig.SERVER_IP_ADDRESS}:8080/drive/ws/video"
         )
         cameraStreamer.startWebSocket()
-        cameraStreamer.bindCameraWithStream(this)
+        cameraStreamer.startStreaming(this)
 
         val lat = intent.getDoubleExtra("lat", -1.0)
         val lon = intent.getDoubleExtra("lon", -1.0)
@@ -93,7 +96,7 @@ class NaviActivity : AppCompatActivity(),
             return
         }
 
-        val fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        fusedClient = LocationServices.getFusedLocationProviderClient(this)
         fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
             .addOnSuccessListener { location ->
                 if (location != null) {
@@ -128,6 +131,27 @@ class NaviActivity : AppCompatActivity(),
                     Toast.makeText(this, "현재 위치를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
                 }
             }
+
+        // ✅ GPS 위치 업데이트 설정
+        fusedClient = LocationServices.getFusedLocationProviderClient(this)
+
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L) // 1초마다
+            .setMinUpdateDistanceMeters(1.0f) // 1m 이상 이동해야 반응
+            .build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val location = result.lastLocation ?: return
+                cameraStreamer.updateSpeedFromLocation(location)
+                Log.d("GPS", "속도 갱신됨: ${location.speed * 3.6f} km/h")
+            }
+        }
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedClient.requestLocationUpdates(locationRequest, locationCallback, mainLooper)
+        } else {
+            Toast.makeText(this, "위치 권한 필요", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startGuide(trip: KNTrip?) {
@@ -228,5 +252,10 @@ class NaviActivity : AppCompatActivity(),
 
     override fun didUpdateCitsGuide(aGuidance: KNGuidance, aCitsGuide: KNGuide_Cits) {
         naviView.didUpdateCitsGuide(aGuidance, aCitsGuide)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        fusedClient.removeLocationUpdates(locationCallback)
     }
 }
