@@ -3,7 +3,7 @@ package com.bumper_car.vroomie_fe.data.remote.auth
 import retrofit2.http.GET
 import retrofit2.http.Header
 
-interface AuthApiService {
+interface AuthApi {
     @GET("/me")
     suspend fun getMyInfo(
         @Header("Authorization") token: String

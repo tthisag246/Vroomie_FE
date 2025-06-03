@@ -6,19 +6,19 @@ import com.bumper_car.vroomie_fe.ui.screen.drivetip.DriveTipItemUiState
 
 fun DriveTip.toDriveTipItemUiState(): DriveTipItemUiState {
     return DriveTipItemUiState(
-        id = id,
+        tipId = tipId,
         title = title,
-        thumbnailUrl = thumbnailUrl,
-        date = date
+        thumbnailUrl = thumbnailUrl.orEmpty(),
+        createAt = createAt.orEmpty()
     )
 }
 
 fun DriveTip.toDriveTipDetailUiState(): DriveTipDetailUiState {
     return DriveTipDetailUiState(
-        id = id,
+        tipId = tipId,
         title = title,
-        thumbnailUrl = thumbnailUrl,
-        date = date,
+        thumbnailUrl = thumbnailUrl.orEmpty(),
+        createAt = createAt.orEmpty(),
         content = content.orEmpty()
     )
 }

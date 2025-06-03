@@ -52,6 +52,20 @@ fun LoginScreen(
     val intent = activity?.intent
     val handled = remember { mutableStateOf(false) }
 
+    fun onClickKakaoLoginButton() {
+//    val clientId = "3ce58b28ecb090ff8b53a0a20044a043"
+//    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
+//    val url = "https://kauth.kakao.com/oauth/authorize" +
+//            "?client_id=$clientId" +
+//            "&redirect_uri=$redirectUri" +
+//            "&response_type=code"
+//
+//    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+//    context.startActivity(intent)
+        navController.navigate("home")
+    }
+
+
     // ✅ 외부 인텐트에서 token 받아서 처리
     LaunchedEffect(intent?.data) {
         if (!handled.value) {
@@ -96,7 +110,7 @@ fun LoginScreen(
                 .padding(horizontal = 60.dp)
                 .padding(bottom = 100.dp)
                 .align(Alignment.BottomCenter)
-                .clickable { onClickKakaoLoginButton(context) }
+                .clickable { onClickKakaoLoginButton() }
         )
     }
 }

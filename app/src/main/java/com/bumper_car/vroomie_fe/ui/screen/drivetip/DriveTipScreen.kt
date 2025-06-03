@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,8 @@ import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import com.bumper_car.vroomie_fe.R
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun DriveTipScreen(
@@ -47,6 +50,20 @@ fun DriveTipScreen(
     viewModel: DriveTipViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchDriveTips()
+    }
+
+    fun String.toDateFormat(pattern: String = "yyyy년 MM월 dd일"): String {
+        return try {
+            if (this.isBlank()) return "-"
+            val parsed = LocalDateTime.parse(this)
+            parsed.format(DateTimeFormatter.ofPattern(pattern))
+        } catch (e: Exception) {
+            "-"
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -86,11 +103,11 @@ fun DriveTipScreen(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(uiState.tipList) { tip ->
+                items(uiState.tips) { tip ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { navController.navigate("drive_tip/${tip.id}") }
+                            .clickable { navController.navigate("drive_tip/${tip.tipId}") }
                             .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -106,7 +123,7 @@ fun DriveTipScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = tip.date,
+                                text = tip.createAt.toDateFormat(),
                                 fontSize = 14.sp,
                                 maxLines = 2,
                                 color = Color.Gray
