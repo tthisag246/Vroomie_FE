@@ -39,7 +39,9 @@ class VoiceService : Service() {
         super.onCreate()
         setupForegroundNotification()
         initTTS()
-        startWakeWordListening()
+        CoroutineScope(Dispatchers.Main).launch {
+            startWakeWordListening()
+        }
     }
 
     private fun setupForegroundNotification() {
@@ -60,10 +62,12 @@ class VoiceService : Service() {
     }
 
     private fun initTTS() {
-        tts = TextToSpeech(this) {
-            if (it == TextToSpeech.SUCCESS) {
-                tts.language = Locale.KOREAN
-                isTtsReady = true
+        CoroutineScope(Dispatchers.IO).launch {
+            tts = TextToSpeech(this@VoiceService) {
+                if (it == TextToSpeech.SUCCESS) {
+                    tts.language = Locale.KOREAN
+                    isTtsReady = true
+                }
             }
         }
     }

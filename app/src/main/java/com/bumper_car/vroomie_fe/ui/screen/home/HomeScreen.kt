@@ -2,13 +2,8 @@ package com.bumper_car.vroomie_fe.ui.screen.home
 
 import android.Manifest
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -69,7 +64,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
@@ -77,7 +71,6 @@ import com.bumper_car.vroomie_fe.ui.screen.drive.CameraGuideActivity
 import com.bumper_car.vroomie_fe.ui.screen.drive.NaviActivity
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import org.bson.AbstractBsonWriter
 
 private fun convertWgsToTm(lat: Double, lon: Double): Pair<Int, Int> {
     val x = (lon * 20037508.34 / 180.0).toInt()
@@ -350,21 +343,31 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        getDriveLevelImage(driveScorePrevLevel)?.let {
-                            Image(
-                                painter = painterResource(it),
-                                contentDescription = "이전 레벨",
-                                contentScale = ContentScale.FillWidth,
-                                modifier = Modifier.size(100.dp)
-                            )
+                        Box(
+                            modifier = Modifier.size(100.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            getDriveLevelImage(driveScorePrevLevel)?.let {
+                                Image(
+                                    painter = painterResource(it),
+                                    contentDescription = "이전 레벨",
+                                    contentScale = ContentScale.FillWidth,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
-                        getDriveLevelImage(driveScoreNextLevel)?.let {
-                            Image(
-                                painter = painterResource(it),
-                                contentDescription = "이후 레벨",
-                                contentScale = ContentScale.FillWidth,
-                                modifier = Modifier.size(100.dp)
-                            )
+                        Box(
+                            modifier = Modifier.size(100.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            getDriveLevelImage(driveScoreNextLevel)?.let {
+                                Image(
+                                    painter = painterResource(it),
+                                    contentDescription = "이후 레벨",
+                                    contentScale = ContentScale.FillWidth,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
 
