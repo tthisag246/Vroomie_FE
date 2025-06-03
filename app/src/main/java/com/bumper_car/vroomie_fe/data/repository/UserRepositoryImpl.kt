@@ -1,6 +1,7 @@
 package com.bumper_car.vroomie_fe.data.repository
 
 import com.bumper_car.vroomie_fe.data.remote.user.UserRemoteDataSource
+import com.bumper_car.vroomie_fe.data.remote.user.UserScoreReportResponse
 import com.bumper_car.vroomie_fe.domain.model.User
 import javax.inject.Inject
 
@@ -24,5 +25,9 @@ class UserRepositoryImpl @Inject constructor(
             kakaoId = null,
             createAt = null,
         )
+    }
+
+    override suspend fun getUserScoreReport(): UserScoreReportResponse {
+        return remoteDataSource.getUserScoreReport()
     }
 }

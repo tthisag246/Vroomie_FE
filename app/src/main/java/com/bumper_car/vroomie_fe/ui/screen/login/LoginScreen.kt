@@ -41,15 +41,15 @@ fun LoginScreen(
     val handled = remember { mutableStateOf(false) }
 
     fun onClickKakaoLoginButton() {
-//    val clientId = "3ce58b28ecb090ff8b53a0a20044a043"
-//    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
-//    val url = "https://kauth.kakao.com/oauth/authorize" +
-//            "?client_id=$clientId" +
-//            "&redirect_uri=$redirectUri" +
-//            "&response_type=code"
-//
-//    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-//    context.startActivity(intent)
+    val clientId = BuildConfig.KAKAO_REST_API_KEY
+    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
+    val url = "https://kauth.kakao.com/oauth/authorize" +
+            "?client_id=$clientId" +
+            "&redirect_uri=$redirectUri" +
+            "&response_type=code"
+
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+    context.startActivity(intent)
         navController.navigate("home")
     }
 
@@ -61,8 +61,9 @@ fun LoginScreen(
             if (uri?.scheme == "vroomie" && uri.host == "login-success") {
                 val token = uri.getQueryParameter("token")
                 if (!token.isNullOrEmpty()) {
+                    val tokenPreferences = TokenPreferences(context)
                     CoroutineScope(Dispatchers.IO).launch {
-                        TokenPreferences.setToken(context, token)
+                        tokenPreferences.setToken(token)
                     }
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
