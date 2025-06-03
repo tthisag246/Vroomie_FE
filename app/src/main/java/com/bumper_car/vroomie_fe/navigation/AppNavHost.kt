@@ -15,10 +15,12 @@ import com.bumper_car.vroomie_fe.ui.screen.drivetip.DriveTipDetailScreen
 import com.bumper_car.vroomie_fe.ui.screen.drivetip.DriveTipScreen
 import com.bumper_car.vroomie_fe.ui.screen.home.HomeScreen
 import com.bumper_car.vroomie_fe.ui.screen.login.LoginScreen
+import com.bumper_car.vroomie_fe.ui.screen.login.SignUpExtraInfoScreen
 import com.bumper_car.vroomie_fe.ui.screen.mypage.MyPageScreen
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
+    object SignUpExtraInfo : Screen("extra_info")
     object Home : Screen("home")
     object Drive : Screen("drive")
     object DriveScore : Screen("drive_score")
@@ -37,6 +39,7 @@ fun AppNavHost(navController: NavHostController, viewModel: AppViewModel = hiltV
         navController = navController,
         startDestination = if (isLoggedIn) Screen.Home.route else Screen.Login.route) {
         composable(Screen.Login.route) { LoginScreen(navController) }
+        composable(Screen.SignUpExtraInfo.route) { SignUpExtraInfoScreen(navController) }
         composable(Screen.Home.route) { HomeScreen(navController) }
         composable(Screen.Drive.route) { DriveScreen(navController) }
         composable(Screen.DriveScore.route) { DriveScoreScreen(navController) }
