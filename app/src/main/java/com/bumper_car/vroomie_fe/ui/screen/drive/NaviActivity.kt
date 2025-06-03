@@ -40,6 +40,7 @@ import com.google.android.gms.location.*
 import com.kakaomobility.knsdk.KNRGCode
 import com.kakaomobility.knsdk.guidance.knguidance.routeguide.objects.KNDirection
 import com.kakaomobility.knsdk.guidance.knguidance.voiceguide.KNVoiceCode
+import org.json.JSONObject
 import java.util.Locale
 
 class NaviActivity : AppCompatActivity(),
@@ -55,13 +56,17 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var cameraStreamer: CameraStreamer
     private lateinit var fusedClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+
+    // TTS
     private lateinit var tts: TextToSpeech
+    private val lastEventTimestamps = mutableMapOf<String, Long>()
+    private val cooldownMillis = 6000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_navi)
 
-        // ✅ TTS 초기화
+        // TTS 초기화
         tts = TextToSpeech(this) {
             if (it == TextToSpeech.SUCCESS) {
                 tts.language = Locale.KOREAN
@@ -87,6 +92,11 @@ class NaviActivity : AppCompatActivity(),
             previewView = previewView,
             wsUrl = "ws://${BuildConfig.SERVER_IP_ADDRESS}:8080/drive/ws/video"
         )
+        cameraStreamer.setOnMessageListener { message ->
+            runOnUiThread {
+                handleDriveEvent(message)
+            }
+        }
         cameraStreamer.startWebSocket()
         cameraStreamer.startStreaming(this)
 
@@ -185,6 +195,77 @@ class NaviActivity : AppCompatActivity(),
                 KNRoutePriority.KNRoutePriority_Recommand,
                 0
             )
+        }
+    }
+
+    private fun isCooldownPassed(eventKey: String): Boolean {
+        val now = System.currentTimeMillis()
+        val lastTime = lastEventTimestamps[eventKey] ?: 0L
+        return if (now - lastTime > cooldownMillis) {
+            lastEventTimestamps[eventKey] = now
+            true
+        } else {
+            false
+        }
+    }
+
+    private fun handleDriveEvent(jsonString: String) {
+        try {
+            val json = JSONObject(jsonString)
+            val event = json.getString("event")
+
+            if (tts.isSpeaking || !isCooldownPassed(event)) return
+
+            when (event) {
+                "Left_Deviation" -> {
+                    tts.speak(
+                        "차로의 왼쪽으로 치우쳤어요! 오른발이 도로의 중앙에 떠있는 듯한 지점에 맞추고 시야를 멀리 두세요.",
+                        TextToSpeech.QUEUE_FLUSH, null, null
+                    )
+                }
+
+                "Right_Deviation" -> {
+                    tts.speak(
+                        "차로의 오른쪽으로 치우쳤어요! 오른발이 도로의 중앙에 떠있는 듯한 지점에 맞추고 시야를 멀리 두세요.",
+                        TextToSpeech.QUEUE_FLUSH, null, null
+                    )
+                }
+
+                "Cut_In" -> {
+                    tts.speak(
+                        "우측 또는 좌측 차량이 차로를 변경하려고 해요! 속도를 줄여서 끼어들 공간을 만들어주세요.",
+                        TextToSpeech.QUEUE_FLUSH, null, null
+                    )
+                }
+
+                "Safe_Distance_Violation" -> {
+                    val recommended = json.optDouble("recommended_distance", -1.0)
+                    val actual = json.optDouble("actual_distance", -1.0)
+
+                    val message = if (recommended > 0 && actual > 0) {
+                        "앞차와 너무 가까워요! 현재 앞차와의 거리 ${"%.1f".format(actual)}미터이며, 현재 속도에서의 권장 안전거리는 ${"%.1f".format(recommended)}미터입니다. 속도를 줄여서 안전거리를 확보하세요."
+                    } else {
+                        "앞차와 너무 가까워요! 속도를 줄여서 안전거리를 확보하세요."
+                    }
+                    tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
+                }
+
+                "Stopped_Distance_Check" -> {
+                    val actual = json.optDouble("actual_distance", -1.0)
+                    val message = if (actual > 0) {
+                        "정지 시 앞 차와 ${"%.1f".format(actual)}미터 거리를 확보하세요.".trimIndent()
+                    } else {
+                        "정지 시 앞차와의 거리를 충분히 확보하세요."
+                    }
+                    tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
+                }
+
+                else -> {
+                    Log.w("DriveEvent", "알 수 없는 이벤트: $event")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("DriveEvent", "JSON 파싱 오류: ${e.message}")
         }
     }
 

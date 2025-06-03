@@ -32,9 +32,14 @@ class CameraStreamer(
     private val executor = Executors.newSingleThreadExecutor()
     private val lastSentTimeMillis = AtomicLong(0)
     private val targetFrameIntervalMillis = 500L // 2 FPS
+    private var messageListener: ((String) -> Unit)? = null
 
     @Volatile
     private var currentSpeedKph: Float = 0f
+
+    fun setOnMessageListener(listener: (String) -> Unit) {
+        messageListener = listener
+    }
 
     fun updateSpeedFromLocation(location: Location) {
         val speedMps = location.speed
@@ -52,6 +57,11 @@ class CameraStreamer(
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                 Log.e("CameraStreamer", "WebSocket 에러: ${t.message}")
                 t.printStackTrace()
+            }
+
+            override fun onMessage(ws: WebSocket, text: String) {
+                Log.d("CameraStreamer", "서버에서 메시지 수신됨: $text")
+                messageListener?.invoke(text)
             }
         })
     }
