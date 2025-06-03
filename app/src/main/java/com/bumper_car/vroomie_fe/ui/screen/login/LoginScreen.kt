@@ -53,16 +53,15 @@ fun LoginScreen(
     val handled = remember { mutableStateOf(false) }
 
     fun onClickKakaoLoginButton() {
-    val clientId = BuildConfig.KAKAO_REST_API_KEY
-    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
-    val url = "https://kauth.kakao.com/oauth/authorize" +
-            "?client_id=$clientId" +
-            "&redirect_uri=$redirectUri" +
-            "&response_type=code"
+        val clientId = BuildConfig.KAKAO_REST_API_KEY
+        val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
+        val url = "https://kauth.kakao.com/oauth/authorize" +
+                "?client_id=$clientId" +
+                "&redirect_uri=$redirectUri" +
+                "&response_type=code"
 
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-    context.startActivity(intent)
-        navController.navigate("home")
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        context.startActivity(intent)
     }
 
 
@@ -77,7 +76,7 @@ fun LoginScreen(
                     CoroutineScope(Dispatchers.IO).launch {
                         tokenPreferences.setToken(token)
                     }
-                    navController.navigate("home") {
+                    navController.navigate("extra_info") {
                         popUpTo("login") { inclusive = true }
                         launchSingleTop = true
                     }
