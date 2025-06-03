@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -35,6 +36,12 @@ import com.kakaomobility.knsdk.guidance.knguidance.voiceguide.KNGuide_Voice
 import com.kakaomobility.knsdk.trip.kntrip.KNTrip
 import com.kakaomobility.knsdk.trip.kntrip.knroute.KNRoute
 import com.kakaomobility.knsdk.ui.view.KNNaviView
+import com.google.android.gms.location.*
+import com.kakaomobility.knsdk.KNRGCode
+import com.kakaomobility.knsdk.guidance.knguidance.routeguide.objects.KNDirection
+import com.kakaomobility.knsdk.guidance.knguidance.voiceguide.KNVoiceCode
+import org.json.JSONObject
+import java.util.Locale
 
 class NaviActivity : AppCompatActivity(),
     KNGuidance_GuideStateDelegate,
@@ -47,10 +54,24 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var naviView: KNNaviView
     private lateinit var previewView: PreviewView
     private lateinit var cameraStreamer: CameraStreamer
+    private lateinit var fusedClient: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
+
+    // TTS
+    private lateinit var tts: TextToSpeech
+    private val lastEventTimestamps = mutableMapOf<String, Long>()
+    private val cooldownMillis = 6000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_navi)
+
+        // TTS 초기화
+        tts = TextToSpeech(this) {
+            if (it == TextToSpeech.SUCCESS) {
+                tts.language = Locale.KOREAN
+            }
+        }
 
         naviView = findViewById(R.id.navi_view)
         previewView = findViewById(R.id.preview_view)
@@ -71,8 +92,13 @@ class NaviActivity : AppCompatActivity(),
             previewView = previewView,
             wsUrl = "ws://${BuildConfig.SERVER_IP_ADDRESS}:8080/drive/ws/video"
         )
+        cameraStreamer.setOnMessageListener { message ->
+            runOnUiThread {
+                handleDriveEvent(message)
+            }
+        }
         cameraStreamer.startWebSocket()
-        cameraStreamer.bindCameraWithStream(this)
+        cameraStreamer.startStreaming(this)
 
         val lat = intent.getDoubleExtra("lat", -1.0)
         val lon = intent.getDoubleExtra("lon", -1.0)
@@ -93,7 +119,7 @@ class NaviActivity : AppCompatActivity(),
             return
         }
 
-        val fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        fusedClient = LocationServices.getFusedLocationProviderClient(this)
         fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
             .addOnSuccessListener { location ->
                 if (location != null) {
@@ -128,6 +154,27 @@ class NaviActivity : AppCompatActivity(),
                     Toast.makeText(this, "현재 위치를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
                 }
             }
+
+        // ✅ GPS 위치 업데이트 설정
+        fusedClient = LocationServices.getFusedLocationProviderClient(this)
+
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L) // 1초마다
+            .setMinUpdateDistanceMeters(1.0f) // 1m 이상 이동해야 반응
+            .build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val location = result.lastLocation ?: return
+                cameraStreamer.updateSpeedFromLocation(location)
+                Log.d("GPS", "속도 갱신됨: ${location.speed * 3.6f} km/h")
+            }
+        }
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedClient.requestLocationUpdates(locationRequest, locationCallback, mainLooper)
+        } else {
+            Toast.makeText(this, "위치 권한 필요", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startGuide(trip: KNTrip?) {
@@ -148,6 +195,77 @@ class NaviActivity : AppCompatActivity(),
                 KNRoutePriority.KNRoutePriority_Recommand,
                 0
             )
+        }
+    }
+
+    private fun isCooldownPassed(eventKey: String): Boolean {
+        val now = System.currentTimeMillis()
+        val lastTime = lastEventTimestamps[eventKey] ?: 0L
+        return if (now - lastTime > cooldownMillis) {
+            lastEventTimestamps[eventKey] = now
+            true
+        } else {
+            false
+        }
+    }
+
+    private fun handleDriveEvent(jsonString: String) {
+        try {
+            val json = JSONObject(jsonString)
+            val event = json.getString("event")
+
+            if (tts.isSpeaking || !isCooldownPassed(event)) return
+
+            when (event) {
+                "Left_Deviation" -> {
+                    tts.speak(
+                        "차로의 왼쪽으로 치우쳤어요! 오른발이 도로의 중앙에 떠있는 듯한 지점에 맞추고 시야를 멀리 두세요.",
+                        TextToSpeech.QUEUE_FLUSH, null, null
+                    )
+                }
+
+                "Right_Deviation" -> {
+                    tts.speak(
+                        "차로의 오른쪽으로 치우쳤어요! 오른발이 도로의 중앙에 떠있는 듯한 지점에 맞추고 시야를 멀리 두세요.",
+                        TextToSpeech.QUEUE_FLUSH, null, null
+                    )
+                }
+
+                "Cut_In" -> {
+                    tts.speak(
+                        "우측 또는 좌측 차량이 차로를 변경하려고 해요! 속도를 줄여서 끼어들 공간을 만들어주세요.",
+                        TextToSpeech.QUEUE_FLUSH, null, null
+                    )
+                }
+
+                "Safe_Distance_Violation" -> {
+                    val recommended = json.optDouble("recommended_distance", -1.0)
+                    val actual = json.optDouble("actual_distance", -1.0)
+
+                    val message = if (recommended > 0 && actual > 0) {
+                        "앞차와 너무 가까워요! 현재 앞차와의 거리 ${"%.1f".format(actual)}미터이며, 현재 속도에서의 권장 안전거리는 ${"%.1f".format(recommended)}미터입니다. 속도를 줄여서 안전거리를 확보하세요."
+                    } else {
+                        "앞차와 너무 가까워요! 속도를 줄여서 안전거리를 확보하세요."
+                    }
+                    tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
+                }
+
+                "Stopped_Distance_Check" -> {
+                    val actual = json.optDouble("actual_distance", -1.0)
+                    val message = if (actual > 0) {
+                        "정지 시 앞 차와 ${"%.1f".format(actual)}미터 거리를 확보하세요.".trimIndent()
+                    } else {
+                        "정지 시 앞차와의 거리를 충분히 확보하세요."
+                    }
+                    tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
+                }
+
+                else -> {
+                    Log.w("DriveEvent", "알 수 없는 이벤트: $event")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("DriveEvent", "JSON 파싱 오류: ${e.message}")
         }
     }
 
@@ -219,7 +337,29 @@ class NaviActivity : AppCompatActivity(),
         aVoiceGuide: KNGuide_Voice,
         aNewData: MutableList<ByteArray>
     ): Boolean {
-        return naviView.shouldPlayVoiceGuide(aGuidance, aVoiceGuide, aNewData)
+        if (aVoiceGuide.voiceCode == KNVoiceCode.KNVoiceCode_Turn) {
+            val direction = aVoiceGuide.guideObj as? KNDirection ?: return true
+
+            when (direction.rgCode) {
+                KNRGCode.KNRGCode_LeftTurn -> {
+                    tts.speak("좌측 깜빡이를 켜세요. 교차로 내에서는 자기 차선대로 좌회전하세요. 유도선이 있다면 유도선을 따라 회전하세요.", TextToSpeech.QUEUE_FLUSH, null, null)
+                    return false
+                }
+                KNRGCode.KNRGCode_RightTurn -> {
+                    tts.speak("우측 깜빡이를 켜세요. 우회전하기 전, 좌측이나 정면에서 오는 차가 있는지 확인하세요. 보행자가 있는지 확인하세요.", TextToSpeech.QUEUE_FLUSH, null, null)
+                    return false
+                }
+                KNRGCode.KNRGCode_UTurn -> {
+                    tts.speak("좌측 깜빡이를 켜세요. 정면 신호가 좌회전/보행자/직진 신호일 때 유턴하여 3차선으로 들어가세요. 유턴 구간에서는 앞차의 뒤를 따라 순서대로 돌아야 합니다.", TextToSpeech.QUEUE_FLUSH, null, null)
+                    return false
+                }
+                else -> {
+                    Log.d("VoiceGuide", "기타 rgCode: ${direction.rgCode}")
+                }
+            }
+        }
+
+        return true
     }
 
     override fun willPlayVoiceGuide(aGuidance: KNGuidance, aVoiceGuide: KNGuide_Voice) {
@@ -228,5 +368,10 @@ class NaviActivity : AppCompatActivity(),
 
     override fun didUpdateCitsGuide(aGuidance: KNGuidance, aCitsGuide: KNGuide_Cits) {
         naviView.didUpdateCitsGuide(aGuidance, aCitsGuide)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        fusedClient.removeLocationUpdates(locationCallback)
     }
 }
