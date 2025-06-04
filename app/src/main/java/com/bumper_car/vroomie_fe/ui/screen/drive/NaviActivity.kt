@@ -57,6 +57,7 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var cameraStreamer: CameraStreamer
     private lateinit var fusedClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private lateinit var gpsSpeedMonitor: GpsSpeedMonitor
 
     // TTS
     private lateinit var tts: TextToSpeech
@@ -73,6 +74,26 @@ class NaviActivity : AppCompatActivity(),
                 tts.language = Locale.KOREAN
             }
         }
+
+        // 가속도 감지
+        gpsSpeedMonitor = GpsSpeedMonitor(
+            context = this,
+            onSuddenAccel = {
+                val key = "Sudden_Accel"
+                if (isCooldownPassed(key) && !tts.isSpeaking) {
+                    tts.speak("급가속 했어요. 브레이크를 미리미리 준비하며 부드럽게 가속해보세요.", TextToSpeech.QUEUE_FLUSH, null, key)
+                }
+                Log.d("DrivingEvent", "🚀 급가속 감지됨")
+            },
+            onSuddenDecel = {
+                val key = "Sudden_Decel"
+                if (isCooldownPassed(key) && !tts.isSpeaking) {
+                    tts.speak("급감속 했어요. 미리 주변 상황을 보고 브레이크를 여유있게 밟아보세요.", TextToSpeech.QUEUE_FLUSH, null, key)
+                }
+                Log.d("DrivingEvent", "🛑 급감속 감지됨")
+            }
+        )
+        gpsSpeedMonitor.start()
 
         naviView = findViewById(R.id.navi_view)
         previewView = findViewById(R.id.preview_view)
@@ -374,6 +395,7 @@ class NaviActivity : AppCompatActivity(),
     override fun onDestroy() {
         super.onDestroy()
         fusedClient.removeLocationUpdates(locationCallback)
+
         // 녹화 종료 처리
         cameraStreamer.stopRecording()
         cameraStreamer.stopWebSocket() // ← temp
@@ -402,5 +424,8 @@ class NaviActivity : AppCompatActivity(),
         val userId = intent.getIntExtra("user_id", -1)
         val historyId = intent.getIntExtra("history_id", -1)
         uploadS3.uploadClipBatch(clipList, userId, historyId)
+
+        gpsSpeedMonitor.stop()
+
     }
 }
