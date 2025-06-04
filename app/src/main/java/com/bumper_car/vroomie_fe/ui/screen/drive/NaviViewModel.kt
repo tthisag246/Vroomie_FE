@@ -12,6 +12,7 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -21,25 +22,66 @@ class NaviViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DriveResultUiState())
     val uiState: StateFlow<DriveResultUiState> = _uiState.asStateFlow()
 
+    fun setStartAt(time: String) {
+        _uiState.update { it.copy(startAt = time) }
+    }
+
+    fun setEndAt(time: String) {
+        _uiState.update { it.copy(endAt = time) }
+    }
+
+    fun setStartLocation(location: String) {
+        _uiState.update { it.copy(startLocation = location) }
+    }
+
+    fun setEndLocation(location: String) {
+        _uiState.update { it.copy(endLocation = location) }
+    }
+
+    fun updateDistanceAndDuration(distanceMeters: Float, durationSeconds: Int) {
+        _uiState.update { it.copy(distance = distanceMeters, duration = durationSeconds) }
+    }
+
+    fun incrementLaneDeviationLeftCount() {
+        _uiState.update { it.copy(laneDeviationLeftCount = it.laneDeviationLeftCount + 1) }
+    }
+
+    fun incrementLaneDeviationRightCount() {
+        _uiState.update { it.copy(laneDeviationRightCount = it.laneDeviationRightCount + 1) }
+    }
+
+    fun incrementSafeDistanceViolationCount() {
+        _uiState.update { it.copy(safeDistanceViolationCount = it.safeDistanceViolationCount + 1) }
+    }
+
+    fun incrementSuddenDecelerationCount() {
+        _uiState.update { it.copy(suddenDecelerationCount = it.suddenDecelerationCount + 1) }
+    }
+
+    fun incrementSuddenAccelerationCount() {
+        _uiState.update { it.copy(suddenAccelerationCount = it.suddenAccelerationCount + 1) }
+    }
+
     fun saveDriveResult(
         onSuccess: (DriveHistory) -> Unit,
         onError: (Throwable) -> Unit
     ) {
         viewModelScope.launch {
             try {
+                val currentUiState = _uiState.value
                 val response = saveDriveResultUseCase(
                     DriveResultRequest(
-                        startAt = _uiState.value.startAt,
-                        endAt = _uiState.value.endAt,
-                        startLocation = _uiState.value.startLocation,
-                        endLocation = _uiState.value.endLocation,
-                        distance = _uiState.value.distance,
-                        duration = _uiState.value.duration,
-                        laneDeviationLeftCount = _uiState.value.laneDeviationLeftCount,
-                        laneDeviationRightCount = _uiState.value.laneDeviationRightCount,
-                        safeDistanceViolationCount = _uiState.value.safeDistanceViolationCount,
-                        suddenDecelerationCount = _uiState.value.suddenDecelerationCount,
-                        suddenAccelerationCount = _uiState.value.suddenAccelerationCount,
+                        startAt = currentUiState.startAt,
+                        endAt = currentUiState.endAt,
+                        startLocation = currentUiState.startLocation,
+                        endLocation = currentUiState.endLocation,
+                        distance = currentUiState.distance,
+                        duration = currentUiState.duration,
+                        laneDeviationLeftCount = currentUiState.laneDeviationLeftCount,
+                        laneDeviationRightCount = currentUiState.laneDeviationRightCount,
+                        safeDistanceViolationCount = currentUiState.safeDistanceViolationCount,
+                        suddenDecelerationCount = currentUiState.suddenDecelerationCount,
+                        suddenAccelerationCount = currentUiState.suddenAccelerationCount,
                         speedingCount = _uiState.value.speedingCount,
                         videos = _uiState.value.feedback.map { videoItem ->
                             DriveResultVideoItem(
@@ -57,5 +99,33 @@ class NaviViewModel @Inject constructor(
                 onError(e)
             }
         }
+    }
+
+    suspend fun saveDriveResultDirect(): DriveHistory {
+        val currentUiState = _uiState.value
+        return saveDriveResultUseCase(
+            DriveResultRequest(
+                startAt = currentUiState.startAt,
+                endAt = currentUiState.endAt,
+                startLocation = currentUiState.startLocation,
+                endLocation = currentUiState.endLocation,
+                distance = currentUiState.distance,
+                duration = currentUiState.duration,
+                laneDeviationLeftCount = currentUiState.laneDeviationLeftCount,
+                laneDeviationRightCount = currentUiState.laneDeviationRightCount,
+                safeDistanceViolationCount = currentUiState.safeDistanceViolationCount,
+                suddenDecelerationCount = currentUiState.suddenDecelerationCount,
+                suddenAccelerationCount = currentUiState.suddenAccelerationCount,
+                speedingCount = currentUiState.speedingCount,
+                videos = _uiState.value.feedback.map { videoItem ->
+                    DriveResultVideoItem(
+                        videoId = 0,
+                        title = videoItem.title,
+                        content = videoItem.content,
+                        url = videoItem.videoUrl
+                    )
+                }
+            )
+        )
     }
 }
