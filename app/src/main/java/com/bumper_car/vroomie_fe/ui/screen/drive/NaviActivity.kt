@@ -70,9 +70,6 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var naviView: KNNaviView
     private lateinit var previewView: PreviewView
     private lateinit var cameraStreamer: CameraStreamer
-    private lateinit var fusedClient: FusedLocationProviderClient
-    private lateinit var locationCallback: LocationCallback
-    private lateinit var gpsSpeedMonitor: GpsSpeedMonitor
 
     // TTS
     private lateinit var tts: TextToSpeech
@@ -83,6 +80,10 @@ class NaviActivity : AppCompatActivity(),
     private var lastLocation: android.location.Location? = null
     private var totalDistance: Float = 0f
     private var startTimeMillis: Long = 0L
+
+    // 급기속/급감속
+    private var lastSpeed = 0
+    private var lastSpeedTimestamp = 0L
 
     private val naviViewModel: NaviViewModel by viewModels()
     private lateinit var kakaoNaviApi: KakaoNaviApi
@@ -115,26 +116,6 @@ class NaviActivity : AppCompatActivity(),
                 tts.language = Locale.KOREAN
             }
         }
-
-        gpsSpeedMonitor = GpsSpeedMonitor(
-            context = this,
-            onSuddenAccel = {
-                val key = "Sudden_Accel"
-                if (isCooldownPassed(key) && !tts.isSpeaking) {
-                    tts.speak("급가속 했어요. 브레이크를 미리미리 준비하며 부드럽게 가속해보세요.", TextToSpeech.QUEUE_FLUSH, null, key)
-                    naviViewModel.incrementSuddenAccelerationCount()
-                }
-                Log.d("DrivingEvent", "🚀 급가속 감지됨")
-            },
-            onSuddenDecel = {
-                val key = "Sudden_Decel"
-                if (isCooldownPassed(key) && !tts.isSpeaking) {
-                    tts.speak("급감속 했어요. 미리 주변 상황을 보고 브레이크를 여유있게 밟아보세요.", TextToSpeech.QUEUE_FLUSH, null, key)
-                    naviViewModel.incrementSuddenDecelerationCount()
-                }
-                Log.d("DrivingEvent", "🛑 급감속 감지됨")
-            }
-        )
 
         naviView = findViewById(R.id.navi_view)
         previewView = findViewById(R.id.preview_view)
@@ -238,11 +219,11 @@ class NaviActivity : AppCompatActivity(),
             Toast.makeText(this, "목적지 좌표 정보가 없습니다.", Toast.LENGTH_SHORT).show()
         }
 
-        fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
 
-        // fusedClient.getCurrentLocation() 호출 전 권한 확인
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+            LocationServices.getFusedLocationProviderClient(this)
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                 .addOnSuccessListener { location ->
                     if (location != null) {
                         startTimeMillis = System.currentTimeMillis()
@@ -251,7 +232,6 @@ class NaviActivity : AppCompatActivity(),
                         val katecPoint = KNSDK.convertWGS84ToKATEC(location.longitude, location.latitude)
                         val startPoi = KNPOI("현재 위치", katecPoint.x.toInt(), katecPoint.y.toInt(), "출발지")
 
-                        // 현재 위치의 주소 설정 (좌표를 주소로 변환)
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
                                 val restApiKey = BuildConfig.KAKAO_REST_API_KEY
@@ -265,14 +245,10 @@ class NaviActivity : AppCompatActivity(),
                                     if (response.documents.isNotEmpty()) {
                                         val fullAddress = response.documents[0].roadAddress?.addressName
                                             ?: response.documents[0].address?.addressName
-                                        if (fullAddress != null) {
-                                            val simplifiedAddress = extractCityAndProvince(fullAddress)
-                                            naviViewModel.setStartLocation(simplifiedAddress)
-                                            Log.d("NaviActivity", "출발지 주소: $fullAddress")
-                                        } else {
-                                            naviViewModel.setStartLocation("알 수 없는 주소")
-                                            Log.w("NaviActivity", "출발지 주소 변환 불가")
-                                        }
+                                        val simplifiedAddress = fullAddress?.let { extractCityAndProvince(it) }
+                                            ?: "알 수 없는 주소"
+                                        naviViewModel.setStartLocation(simplifiedAddress)
+                                        Log.d("NaviActivity", "출발지 주소: $fullAddress")
                                     } else {
                                         naviViewModel.setStartLocation("알 수 없는 주소")
                                         Log.w("NaviActivity", "출발지 주소 검색 결과 없음")
@@ -287,9 +263,7 @@ class NaviActivity : AppCompatActivity(),
                         }
 
                         val guidance = Vroomie_FEApplication.knsdk.sharedGuidance()
-
                         if (guidance == null) {
-                            Toast.makeText(this, "SDK 초기화 안됨", Toast.LENGTH_SHORT).show()
                             Log.e("NaviActivity", "KNSDK not initialized")
                             return@addOnSuccessListener
                         }
@@ -298,7 +272,12 @@ class NaviActivity : AppCompatActivity(),
 
                         Vroomie_FEApplication.knsdk.makeTripWithStart(
                             aStart = startPoi,
-                            aGoal = KNPOI(goalPlaceName, KNSDK.convertWGS84ToKATEC(goalLon, goalLat).x.toInt(), KNSDK.convertWGS84ToKATEC(goalLon, goalLat).y.toInt(), goalPlaceName),
+                            aGoal = KNPOI(
+                                goalPlaceName,
+                                KNSDK.convertWGS84ToKATEC(goalLon, goalLat).x.toInt(),
+                                KNSDK.convertWGS84ToKATEC(goalLon, goalLat).y.toInt(),
+                                goalPlaceName
+                            ),
                             aVias = null
                         ) { error, trip ->
                             runOnUiThread {
@@ -310,55 +289,22 @@ class NaviActivity : AppCompatActivity(),
                                 }
                             }
                         }
+
                     } else {
                         Toast.makeText(this, "현재 위치를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show()
                     }
                 }
+
         } else {
             Toast.makeText(this, "위치 권한이 없어 현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
         }
+
 
 
         // GPS 위치 업데이트 설정
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L) // 1초마다
             .setMinUpdateDistanceMeters(1.0f) // 1m 이상 이동해야 반응
             .build()
-
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                val currentLocation = result.lastLocation ?: return
-
-                // 속도 갱신
-                cameraStreamer.updateSpeedFromLocation(currentLocation)
-                Log.d("GPS", "속도 갱신됨: ${currentLocation.speed * 3.6f} km/h")
-
-                // 누적 주행 거리 계산
-                lastLocation?.let { prevLocation ->
-                    val distanceBetweenMeters = prevLocation.distanceTo(currentLocation)
-                    totalDistance += distanceBetweenMeters
-                    val totalDistanceKm = totalDistance / 1000.0f
-                    Log.d("GPS", "누적 거리: ${String.format("%.1f", totalDistanceKm)} km")
-                }
-                lastLocation = currentLocation // 현재 위치를 다음 업데이트를 위한 이전 위치로 저장
-
-                // 누적 주행 시간 계산 (분 단위)
-                val elapsedTimeMillis = System.currentTimeMillis() - startTimeMillis
-                val elapsedTimeSeconds = (elapsedTimeMillis / 1000).toInt()
-                val elapsedTimeMinutes = (elapsedTimeSeconds / 60.0).roundToInt() // 초를 분으로 변환, 반올림
-                Log.d("GPS", "경과 시간: ${elapsedTimeMinutes} 분") // 분
-
-                // ViewModel 업데이트
-                naviViewModel.updateDistanceAndDuration(totalDistance, elapsedTimeSeconds)
-            }
-        }
-
-        // fusedClient.requestLocationUpdates() 호출 전 권한 확인
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedClient.requestLocationUpdates(locationRequest, locationCallback, mainLooper)
-            gpsSpeedMonitor.start()
-        } else {
-            Log.w("NaviActivity", "requestLocationUpdates: 위치 권한 없음. 호출 건너뜀.")
-        }
     }
 
 
@@ -515,8 +461,6 @@ class NaviActivity : AppCompatActivity(),
     override fun guidanceRouteUnchanged(aGuidance: KNGuidance) {
         naviView.guidanceRouteUnchanged(aGuidance)
 
-        fusedClient.removeLocationUpdates(locationCallback)
-
         // 녹화 종료 처리
         cameraStreamer.stopRecording()
         cameraStreamer.stopWebSocket() // ← temp
@@ -553,7 +497,67 @@ class NaviActivity : AppCompatActivity(),
 
     override fun guidanceDidUpdateLocation(aGuidance: KNGuidance, aLocationGuide: KNGuide_Location) {
         naviView.guidanceDidUpdateLocation(aGuidance, aLocationGuide)
+
+        val sdkSpeed = aLocationGuide.gpsMatched.speed  // km/h
+        val speedTrust = aLocationGuide.gpsMatched.speedTrust
+
+        cameraStreamer.updateSpeedFromKakaoSdk(sdkSpeed, speedTrust)
+
+        if (speedTrust) {
+            val now = System.currentTimeMillis()
+            val deltaV = sdkSpeed - lastSpeed
+            val deltaT = now - lastSpeedTimestamp
+
+            if (deltaT in 500..3000) {
+                if (deltaV >= 30) {
+                    val key = "Sudden_Accel"
+                    if (isCooldownPassed(key) && !tts.isSpeaking) {
+                        tts.speak(
+                            "급가속 했어요. 브레이크를 미리미리 준비하며 부드럽게 가속해보세요.",
+                            TextToSpeech.QUEUE_FLUSH, null, key
+                        )
+                        naviViewModel.incrementSuddenAccelerationCount()
+                        Log.d("DrivingEvent", "🚀 급가속 감지됨")
+                    }
+                } else if (deltaV <= -30) {
+                    val key = "Sudden_Decel"
+                    if (isCooldownPassed(key) && !tts.isSpeaking) {
+                        tts.speak(
+                            "급감속 했어요. 미리 주변 상황을 보고 브레이크를 여유있게 밟아보세요.",
+                            TextToSpeech.QUEUE_FLUSH, null, key
+                        )
+                        naviViewModel.incrementSuddenDecelerationCount()
+                        Log.d("DrivingEvent", "🛑 급감속 감지됨")
+                    }
+                }
+
+                lastSpeed = sdkSpeed
+                lastSpeedTimestamp = now
+            }
+        }
+
+        // 📌 거리/시간 계산
+        val katec = aLocationGuide.gpsMatched.pos
+        val wgs84 = KNSDK.convertKATECToWGS84(katec.x.toInt(), katec.y.toInt())
+
+        val currentLocation = android.location.Location("Kakao").apply {
+            latitude = wgs84.y
+            longitude = wgs84.x
+        }
+
+        lastLocation?.let { prev ->
+            val distance = prev.distanceTo(currentLocation)
+            totalDistance += distance
+        }
+        lastLocation = currentLocation
+
+        val elapsedTimeMillis = System.currentTimeMillis() - startTimeMillis
+        val elapsedSeconds = (elapsedTimeMillis / 1000).toInt()
+
+        val roundedDistance = (totalDistance * 100).roundToInt() / 100f
+        naviViewModel.updateDistanceAndDuration(roundedDistance, elapsedSeconds)
     }
+
 
     override fun guidanceDidUpdateRouteGuide(aGuidance: KNGuidance, aRouteGuide: KNGuide_Route) {
         naviView.guidanceDidUpdateRouteGuide(aGuidance, aRouteGuide)
@@ -611,8 +615,8 @@ class NaviActivity : AppCompatActivity(),
 
     override fun onDestroy() {
         super.onDestroy()
-        fusedClient.removeLocationUpdates(locationCallback)
-        gpsSpeedMonitor.stop()
+        tts.stop()
+        tts.shutdown()
 
         val endDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
         naviViewModel.setEndAt(endDateTime)
