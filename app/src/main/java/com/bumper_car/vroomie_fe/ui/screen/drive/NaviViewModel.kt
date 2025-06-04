@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.data.remote.drive.DriveResultRequest
 import com.bumper_car.vroomie_fe.data.remote.drive.DriveResultVideoItem
+import com.bumper_car.vroomie_fe.domain.model.DriveHistory
 import com.bumper_car.vroomie_fe.domain.usecase.SaveDriveResultUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -20,9 +21,9 @@ class NaviViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DriveResultUiState())
     val uiState: StateFlow<DriveResultUiState> = _uiState.asStateFlow()
 
-    fun saveDriveResultAndNavigate(
-        navController: NavHostController,
-        driveResultViewModel: DriveResultViewModel
+    fun saveDriveResult(
+        onSuccess: (DriveHistory) -> Unit,
+        onError: (Throwable) -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -50,11 +51,10 @@ class NaviViewModel @Inject constructor(
                         }
                     )
                 )
-
-                driveResultViewModel.setDriveResult(response)
-                navController.navigate("drive/result")
+                onSuccess(response)
             } catch (e: Exception) {
                 e.printStackTrace()
+                onError(e)
             }
         }
     }
