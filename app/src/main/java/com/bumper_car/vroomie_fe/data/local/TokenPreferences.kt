@@ -4,23 +4,39 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-val Context.dataStore by preferencesDataStore(name = "auth")
+private val Context.dataStore by preferencesDataStore(name = "auth")
 
-object TokenPreferences {
+class TokenPreferences @Inject constructor(@ApplicationContext private val context: Context) {
+
     private val TOKEN_KEY = stringPreferencesKey("jwt_token")
 
-    fun getToken(context: Context): Flow<String?> {
-        return context.dataStore.data.map { it[TOKEN_KEY] }
+    private val _tokenFlow = MutableStateFlow<String?>(null)
+    val tokenFlow: StateFlow<String?> = _tokenFlow
+
+    private val scope = CoroutineScope(Dispatchers.IO)
+    init {
+        scope.launch {
+            context.dataStore.data.map { it[TOKEN_KEY] }.collect {
+                _tokenFlow.value = it
+            }
+        }
     }
 
-    suspend fun setToken(context: Context, token: String) {
+    suspend fun setToken(token: String) {
         context.dataStore.edit { it[TOKEN_KEY] = token }
     }
 
-    suspend fun clearToken(context: Context) {
+    suspend fun clearToken() {
         context.dataStore.edit { it.remove(TOKEN_KEY) }
     }
 }

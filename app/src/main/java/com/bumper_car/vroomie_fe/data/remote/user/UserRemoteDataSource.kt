@@ -13,4 +13,12 @@ class UserRemoteDataSource @Inject constructor(
     suspend fun getUserInfo(): UserResponse {
         return api.getUser()
     }
+
+    suspend fun getUserScoreReport(): UserScoreReportResponse {
+        return api.getUserScoreReport()
+    }
+
+    suspend fun saveUserInfo(signUpExtraInfoRequest: SignUpExtraInfoRequest): Boolean {
+        return api.saveUserInfo(signUpExtraInfoRequest).isSuccessful
+    }
 }
