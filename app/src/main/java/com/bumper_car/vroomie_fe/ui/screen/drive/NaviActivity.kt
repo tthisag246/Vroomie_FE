@@ -328,6 +328,37 @@ class NaviActivity : AppCompatActivity(),
 
     override fun guidanceRouteUnchanged(aGuidance: KNGuidance) {
         naviView.guidanceRouteUnchanged(aGuidance)
+        fusedClient.removeLocationUpdates(locationCallback)
+
+        // 녹화 종료 처리
+        cameraStreamer.stopRecording()
+        cameraStreamer.stopWebSocket() // ← temp
+
+
+        // 이벤트 기반 영상 클립 자르기 및 업로드
+        val uploadS3 = UploadS3(this)
+        val recordedFile = cameraStreamer.getRecordedFile() ?: return
+        val eventList = cameraStreamer.getEventList()
+
+        val outputDir = File(filesDir, "clips").apply { mkdirs() }
+        val clipList = mutableListOf<Triple<String, Long, File>>()
+
+        eventList.forEachIndexed { index, (result, timestamp) ->
+            val outputClip = File(outputDir, "clip_${index}_$result.mp4")
+            val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000  // 앞 5초 (초 단위)
+            val durationSec = 12L  // 총 12초
+
+            val success = uploadS3.cutVideoClip(recordedFile, outputClip, startSec, durationSec)
+            if (success) {
+                clipList.add(Triple(result, timestamp, outputClip))
+            }
+        }
+
+        // 백엔드에 user_id, history_id 포함해 업로드 호출
+        val userId = intent.getIntExtra("user_id", -1)
+        val historyId = intent.getIntExtra("history_id", -1)
+        uploadS3.uploadClipBatch(clipList, userId, historyId)
+
     }
 
     override fun guidanceRouteUnchangedWithError(aGuidance: KNGuidance, aError: KNError) {
@@ -395,36 +426,6 @@ class NaviActivity : AppCompatActivity(),
     override fun onDestroy() {
         super.onDestroy()
         fusedClient.removeLocationUpdates(locationCallback)
-
-        // 녹화 종료 처리
-        cameraStreamer.stopRecording()
-        cameraStreamer.stopWebSocket() // ← temp
-
-
-        // 이벤트 기반 영상 클립 자르기 및 업로드
-        val uploadS3 = UploadS3(this)
-        val recordedFile = cameraStreamer.getRecordedFile() ?: return
-        val eventList = cameraStreamer.getEventList()
-
-        val outputDir = File(filesDir, "clips").apply { mkdirs() }
-        val clipList = mutableListOf<Triple<String, Long, File>>()
-
-        eventList.forEachIndexed { index, (result, timestamp) ->
-            val outputClip = File(outputDir, "clip_${index}_$result.mp4")
-            val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000  // 앞 5초 (초 단위)
-            val durationSec = 12L  // 총 12초
-
-            val success = uploadS3.cutVideoClip(recordedFile, outputClip, startSec, durationSec)
-            if (success) {
-                clipList.add(Triple(result, timestamp, outputClip))
-            }
-        }
-
-        // 백엔드에 user_id, history_id 포함해 업로드 호출
-        val userId = intent.getIntExtra("user_id", -1)
-        val historyId = intent.getIntExtra("history_id", -1)
-        uploadS3.uploadClipBatch(clipList, userId, historyId)
-
         gpsSpeedMonitor.stop()
 
     }
