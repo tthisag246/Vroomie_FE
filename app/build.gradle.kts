@@ -8,6 +8,8 @@ import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
             alias(libs.plugins.hilt.android)
             id("kotlin-kapt")
             id("dagger.hilt.android.plugin")
+
+            id("kotlin-parcelize")
         }
 
 val localProperties = gradleLocalProperties(rootDir, providers)

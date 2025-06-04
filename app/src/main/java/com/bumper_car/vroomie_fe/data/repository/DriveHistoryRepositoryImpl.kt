@@ -1,7 +1,10 @@
 package com.bumper_car.vroomie_fe.data.repository
 
+import com.bumper_car.vroomie_fe.data.remote.drive.DriveResultRequest
+import com.bumper_car.vroomie_fe.data.remote.drive.DriveResultResponse
 import com.bumper_car.vroomie_fe.data.remote.drivehistory.DriveHistoryRemoteDataSource
 import com.bumper_car.vroomie_fe.data.remote.drivehistory.DriveHistoryVideoItem
+import com.bumper_car.vroomie_fe.data.remote.user.SignUpExtraInfoRequest
 import com.bumper_car.vroomie_fe.domain.model.DriveFeedback
 import com.bumper_car.vroomie_fe.domain.model.DriveHistory
 import javax.inject.Inject
@@ -49,6 +52,33 @@ class DriveHistoryRepositoryImpl @Inject constructor(
             suddenAccelerationCount = history.suddenAccelerationCount,
             speedingCount = history.speedingCount,
             feedback = history.videos.map { it.toDriveFeedback() }
+        )
+    }
+
+    override suspend fun saveDriveResult(driveResultRequest: DriveResultRequest): DriveHistory {
+        val result = remoteDataSource.saveDriveResult(driveResultRequest)
+        return DriveHistory(
+            historyId = 0,
+            startAt = result.startAt,
+            endAt = result.endAt,
+            startLocation = result.startLocation,
+            endLocation = result.endLocation,
+            score = result.score,
+            distance = result.distance,
+            duration = result.duration,
+            laneDeviationLeftCount = result.laneDeviationLeftCount,
+            laneDeviationRightCount = result.laneDeviationRightCount,
+            safeDistanceViolationCount = result.safeDistanceViolationCount,
+            suddenDecelerationCount = result.suddenDecelerationCount,
+            suddenAccelerationCount = result.suddenAccelerationCount,
+            speedingCount = result.speedingCount,
+            feedback = result.videos.map { video ->
+                DriveFeedback(
+                    title = video.title,
+                    content = video.content,
+                    videoUrl = video.url
+                )
+            },
         )
     }
 
