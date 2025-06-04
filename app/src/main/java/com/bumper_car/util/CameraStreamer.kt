@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.location.Location
+import android.media.MediaRecorder
 import android.util.Base64
 import android.util.Log
+import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -20,8 +22,11 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
+import java.util.*
 
 class CameraStreamer(
     private val context: Context,
@@ -33,6 +38,13 @@ class CameraStreamer(
     private val lastSentTimeMillis = AtomicLong(0)
     private val targetFrameIntervalMillis = 500L // 2 FPS
     private var messageListener: ((String) -> Unit)? = null
+
+    private var mediaRecorder: MediaRecorder? = null
+    private var recordingFile: File? = null
+    private val eventList = mutableListOf<Pair<String, Long>>()
+
+    fun getRecordedFile(): File? = recordingFile
+    fun getEventList(): List<Pair<String, Long>> = eventList
 
     @Volatile
     private var currentSpeedKph: Float = 0f
@@ -61,9 +73,27 @@ class CameraStreamer(
 
             override fun onMessage(ws: WebSocket, text: String) {
                 Log.d("CameraStreamer", "서버에서 메시지 수신됨: $text")
+                try {
+                    val json = JSONObject(text)
+                    val event = json.getString("event")
+                    val timestamp = System.currentTimeMillis()
+                    eventList.add(event to timestamp)
+                } catch (e: Exception) {
+                    Log.e("CameraStreamer", "이벤트 파싱 실패: ${e.message}")
+                }
                 messageListener?.invoke(text)
             }
         })
+    }
+
+    //temp
+    fun stopWebSocket() {
+        try {
+            webSocket.close(1000, "Activity destroyed")  // 정상 종료 코드 1000 사용
+            Log.d("CameraStreamer", "WebSocket 정상 종료")
+        } catch (e: Exception) {
+            Log.e("CameraStreamer", "WebSocket 종료 중 오류: ${e.message}")
+        }
     }
 
     fun startPreviewOnly(lifecycleOwner: LifecycleOwner) {
@@ -81,11 +111,11 @@ class CameraStreamer(
 
     fun startStreaming(lifecycleOwner: LifecycleOwner) {
         startWebSocket()
-        bindCameraWithStream(lifecycleOwner)
+        bindCameraWithStreamAndRecording(lifecycleOwner)
     }
 
     @SuppressLint("UnsafeOptInUsageError")
-    fun bindCameraWithStream(lifecycleOwner: LifecycleOwner) {
+    fun bindCameraWithStreamAndRecording(lifecycleOwner: LifecycleOwner) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
@@ -93,6 +123,9 @@ class CameraStreamer(
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
+
+            val selector = CameraSelector.DEFAULT_BACK_CAMERA
+            val videoCaptureSurface = setupMediaRecorder()
 
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -121,9 +154,47 @@ class CameraStreamer(
                     }
                 }
 
-            val selector = CameraSelector.DEFAULT_BACK_CAMERA
+            //val selector = CameraSelector.DEFAULT_BACK_CAMERA
             cameraProvider.unbindAll()
             cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, imageAnalyzer)
         }, ContextCompat.getMainExecutor(context))
     }
+
+    private fun setupMediaRecorder(): Surface {
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val outputDir = File(context.filesDir, "videos").apply { mkdirs() }
+        val outputFile = File(outputDir, "drive_$timestamp.mp4")
+        recordingFile = outputFile
+
+        mediaRecorder = MediaRecorder().apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setVideoSource(MediaRecorder.VideoSource.SURFACE)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setOutputFile(outputFile.absolutePath)
+            setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setVideoEncodingBitRate(5 * 1024 * 1024)
+            setVideoFrameRate(30)
+            setVideoSize(1280, 720)
+            prepare()
+            start()
+        }
+
+        return mediaRecorder!!.surface
+    }
+
+    fun stopRecording() {
+        try {
+            mediaRecorder?.apply {
+                stop()
+                reset()
+                release()
+            }
+            Log.d("CameraStreamer", "녹화 종료: ${recordingFile?.name}")
+        } catch (e: Exception) {
+            Log.e("CameraStreamer", "녹화 종료 중 오류: ${e.message}")
+        }
+    }
 }
+
+
