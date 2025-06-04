@@ -1,5 +1,9 @@
 package com.bumper_car.vroomie_fe.domain.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
+@Parcelize
 data class DriveHistory(
     val historyId: Int,
     val startAt: String,
@@ -16,10 +20,11 @@ data class DriveHistory(
     val suddenAccelerationCount: Int? = null,
     val speedingCount: Int? = null,
     val feedback: List<DriveFeedback>? = null
-)
+) : Parcelable
 
+@Parcelize
 data class DriveFeedback(
     val title: String,
     val content: String,
     val videoUrl: String
-)
+) : Parcelable
