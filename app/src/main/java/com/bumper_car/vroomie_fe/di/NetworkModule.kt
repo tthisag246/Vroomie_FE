@@ -71,11 +71,13 @@ object NetworkModule {
     @Named("KakaoInterceptor")
     fun provideKakaoInterceptor(): okhttp3.Interceptor {
         return okhttp3.Interceptor { chain ->
-            val authKey = "KakaoAK ${BuildConfig.KAKAO_REST_API_KEY}"
+            val actualKakaoKey = BuildConfig.KAKAO_REST_API_KEY
+            val authKey = "KakaoAK $actualKakaoKey"
             val request = chain.request().newBuilder()
                 .addHeader("Authorization", authKey)
                 .build()
 
+            Log.d("KeyCheck", "Actual BuildConfig Key: $actualKakaoKey")
             Log.d("NaviDebug", "🚨 최종 Authorization 헤더: $authKey")
 
             chain.proceed(request)
@@ -84,18 +86,25 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    @Named("KakaoRetrofit")
-    fun provideKakaoRetrofit(
-        okHttpClient: OkHttpClient,
+    @Named("KakaoOkHttpClient")
+    fun provideKakaoOkHttpClient(
         @Named("KakaoInterceptor") kakaoInterceptor: okhttp3.Interceptor
-    ): Retrofit {
-        val kakaoOkHttpClient = okHttpClient.newBuilder()
+    ): OkHttpClient {
+
+        return OkHttpClient.Builder()
             .addInterceptor(kakaoInterceptor)
             .build()
+    }
 
+    @Provides
+    @Singleton
+    @Named("KakaoRetrofit")
+    fun provideKakaoRetrofit(
+        @Named("KakaoOkHttpClient") kakaoOkHttpClient: OkHttpClient // 새로 분리된 카카오 전용 OkHttpClient 사용
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl("https://dapi.kakao.com/")
-            .client(kakaoOkHttpClient)
+            .client(kakaoOkHttpClient) // 여기에 provideKakaoOkHttpClient에서 생성된 클라이언트 주입
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
