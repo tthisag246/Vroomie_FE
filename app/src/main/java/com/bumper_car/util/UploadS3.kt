@@ -25,6 +25,10 @@ class UploadS3(private val context: Context) {
         userId: Int,
         historyId: Int
     ) {
+        if (clipList.isEmpty()) {
+            Log.d("UploadS3", "클립 리스트가 비어 있어 업로드 생략")
+            return
+        }
         CoroutineScope(Dispatchers.IO).launch {
             val client = OkHttpClient()
             val backendList = JSONArray()
