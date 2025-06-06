@@ -36,10 +36,6 @@ class TokenPreferences @Inject constructor(@ApplicationContext private val conte
         context.dataStore.edit { it[TOKEN_KEY] = token }
     }
 
-    suspend fun getToken(): String? {
-        return context.dataStore.data.first()[TOKEN_KEY]
-    }
-
     suspend fun clearToken() {
         context.dataStore.edit { it.remove(TOKEN_KEY) }
     }

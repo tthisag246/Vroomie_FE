@@ -53,6 +53,11 @@ class CameraStreamer(
         messageListener = listener
     }
 
+    fun updateSpeedFromLocation(location: Location) {
+        val speedMps = location.speed
+        currentSpeedKph = speedMps * 3.6f
+    }
+
     fun startWebSocket() {
         val client = OkHttpClient()
         val request = Request.Builder().url(wsUrl).build()
@@ -107,12 +112,6 @@ class CameraStreamer(
     fun startStreaming(lifecycleOwner: LifecycleOwner) {
         startWebSocket()
         bindCameraWithStreamAndRecording(lifecycleOwner)
-    }
-
-    fun updateSpeedFromKakaoSdk(speedFromSdk: Int, trust: Boolean) {
-        if (trust) {
-            currentSpeedKph = speedFromSdk.toFloat()
-        }
     }
 
     @SuppressLint("UnsafeOptInUsageError")
