@@ -46,6 +46,8 @@ fun SignUpExtraInfoScreen(
     viewModel: SignUpExtraInfoViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
 
     Scaffold(
         topBar = {
@@ -191,7 +193,7 @@ fun SignUpExtraInfoScreen(
                 // 등록하기 버튼
                 Button(
                     onClick = {
-                        viewModel.registerExtraInfo {
+                        viewModel.registerExtraInfo(context) {
                             navController.navigate("home") {
                                 popUpTo("signUpExtraInfo") { inclusive = true }
                             }

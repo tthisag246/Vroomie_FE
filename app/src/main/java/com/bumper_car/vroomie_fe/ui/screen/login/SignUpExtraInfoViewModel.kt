@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.content.Context
 
 @HiltViewModel
 class SignUpExtraInfoViewModel @Inject constructor(
@@ -39,7 +40,7 @@ class SignUpExtraInfoViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(carFuel = fuel)
     }
 
-    fun registerExtraInfo(onSuccess: () -> Unit) {
+    fun registerExtraInfo(context: Context, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
                 saveUserExtraInfoUseCase(
@@ -51,6 +52,9 @@ class SignUpExtraInfoViewModel @Inject constructor(
                         car_fuel = _uiState.value.carFuel?.name
                     )
                 )
+                val prefs = context.getSharedPreferences("USER_PREF", Context.MODE_PRIVATE)
+                prefs.edit().putString("username", _uiState.value.userName).apply()
+
                 onSuccess()
             } catch (e: Exception) {
                 e.printStackTrace()

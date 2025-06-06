@@ -40,7 +40,6 @@ class CameraStreamer(
     private val targetFrameIntervalMillis = 500L // 2 FPS
     private var messageListener: ((String) -> Unit)? = null
 
-    private var mediaRecorder: MediaRecorder? = null
     private var recordingFile: File? = null
     private val eventList = mutableListOf<Pair<String, Long>>()
 
@@ -179,60 +178,6 @@ class CameraStreamer(
         }, ContextCompat.getMainExecutor(context))
     }
 
-
-    /*
-    @SuppressLint("UnsafeOptInUsageError")
-    fun bindCameraWithStreamAndRecording(lifecycleOwner: LifecycleOwner) {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
-            //val selector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(Quality.HD))
-                .build()
-
-            videoCapture = VideoCapture.withOutput(recorder)
-
-
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(executor) { imageProxy ->
-                        val currentTimeMillis = System.currentTimeMillis()
-                        val lastTime = lastSentTimeMillis.get()
-
-                        if (currentTimeMillis - lastTime >= targetFrameIntervalMillis) {
-                            lastSentTimeMillis.set(currentTimeMillis)
-                            val bitmap = imageProxy.toBitmap()
-                            val baos = ByteArrayOutputStream()
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
-                            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-
-                            val payloadJson = JSONObject().apply {
-                                put("frame", base64)
-                                put("speed", currentSpeedKph)
-                            }.toString()
-
-                            webSocket.send(payloadJson)
-                            Log.d("CameraStreamer", "프레임+속도 전송 중... ($currentSpeedKph km/h)")
-                        }
-                        imageProxy.close()
-                    }
-                }
-
-            val selector = CameraSelector.DEFAULT_BACK_CAMERA
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, videoCapture!!, imageAnalyzer)
-        }, ContextCompat.getMainExecutor(context))
-    }*/
-
     fun startRecording(lifecycleOwner: LifecycleOwner) {
         recordingStartTimeMillis = System.currentTimeMillis()
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -273,42 +218,7 @@ class CameraStreamer(
         }
     }
 
-    /*
-    private fun setupMediaRecorder(): Surface {
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val outputDir = File(context.filesDir, "videos").apply { mkdirs() }
-        val outputFile = File(outputDir, "drive_$timestamp.mp4")
-        recordingFile = outputFile
 
-        mediaRecorder = MediaRecorder().apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setOutputFile(outputFile.absolutePath)
-            setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setVideoEncodingBitRate(5 * 1024 * 1024)
-            setVideoFrameRate(30)
-            setVideoSize(1280, 720)
-            prepare()
-            start()
-        }
-
-        return mediaRecorder!!.surface
-    }
-
-    fun stopRecording() {
-        try {
-            mediaRecorder?.apply {
-                stop()
-                reset()
-                release()
-            }
-            Log.d("CameraStreamer", "녹화 종료: ${recordingFile?.name}")
-        } catch (e: Exception) {
-            Log.e("CameraStreamer", "녹화 종료 중 오류: ${e.message}")
-        }
-    }*/
 }
 
 

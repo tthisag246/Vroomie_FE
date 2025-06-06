@@ -1,6 +1,7 @@
 package com.bumper_car.vroomie_fe.ui.screen.drive
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -59,7 +60,6 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import android.os.Handler
 import android.os.Looper
-
 
 
 @AndroidEntryPoint
@@ -423,49 +423,12 @@ class NaviActivity : AppCompatActivity(),
     override fun guidanceGuideEnded(aGuidance: KNGuidance) {
         naviView.guidanceGuideEnded(aGuidance)
 
-        cameraStreamer.stopRecording()
-        cameraStreamer.stopWebSocket()
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            val recordedFile = cameraStreamer.getRecordedFile()
-            val eventList = cameraStreamer.getEventList()
-
-            val userId = intent.getIntExtra("user_id", -1)
-            val historyId = intent.getIntExtra("history_id", -1)
-
-            if (recordedFile != null && eventList.isNotEmpty()) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    val outputDir = File(filesDir, "clips").apply { mkdirs() }
-                    val clipList = mutableListOf<Triple<String, Long, File>>()
-                    val resultCountMap = mutableMapOf<String, Int>()
-
-                    eventList.forEachIndexed { index, (result, timestamp) ->
-                        val currentCount = resultCountMap.getOrDefault(result, 0)
-                        if (currentCount >= 3) return@forEachIndexed
-
-                        val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
-                        val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
-                        val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000
-                        val durationSec = 12L
-
-                        val success = UploadS3(this@NaviActivity).cutVideoClip(recordedFile, outputClip, startSec, durationSec)
-                        Log.d("UploadS3", "클립 자르기 결과: $success, 파일: ${outputClip.absolutePath}")
-
-                        if (success) {
-                            clipList.add(Triple(result, timestamp, outputClip))
-                            resultCountMap[result] = currentCount + 1
-                        }
-                    }
-
-                    UploadS3(this@NaviActivity).uploadClipBatch(clipList, userId, historyId)
-                }
-            }
-        }, 1000)
-
         // 주행 종료 시간 설정
         val endDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
         naviViewModel.setEndAt(endDateTime)
 
+        cameraStreamer.stopRecording()
+        cameraStreamer.stopWebSocket()
 
         // 주행이 성공적으로 종료되었을 때만 saveDriveResult 호출
         naviViewModel.saveDriveResult( // saveDriveResult에 필요한 인자를 넘겨줘야 함
@@ -480,7 +443,44 @@ class NaviActivity : AppCompatActivity(),
             onError = {
                 Toast.makeText(this, "주행 결과 저장 실패", Toast.LENGTH_SHORT).show()
             }
-        )//
+        )
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            val recordedFile = cameraStreamer.getRecordedFile()
+            val eventList = cameraStreamer.getEventList()
+
+            //val userId = intent.getIntExtra("user_id", -1)
+            //val historyId = intent.getIntExtra("history_id", -1)
+
+            if (recordedFile != null && eventList.isNotEmpty()) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val outputDir = File(filesDir, "clips").apply { mkdirs() }
+                    val clipList = mutableListOf<Triple<String, Long, File>>()
+                    val resultCountMap = mutableMapOf<String, Int>()
+
+                    eventList.forEachIndexed { index, (result, timestamp) ->
+                        val currentCount = resultCountMap.getOrDefault(result, 0)
+                        if (currentCount >= 2) return@forEachIndexed
+
+                        val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
+                        val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
+                        val startSec = (timestamp - 2000).coerceAtLeast(0) / 1000
+                        val durationSec = 7L
+
+                        val success = UploadS3(this@NaviActivity).cutVideoClip(recordedFile, outputClip, startSec, durationSec)
+                        Log.d("UploadS3", "클립 자르기 결과: $success, 파일: ${outputClip.absolutePath}")
+
+                        if (success) {
+                            clipList.add(Triple(result, timestamp, outputClip))
+                            resultCountMap[result] = currentCount + 1
+                        }
+                    }
+
+                    UploadS3(this@NaviActivity).uploadClipBatch(clipList)
+                }
+            }
+        }, 1000)
+
     }
 
     override fun guidanceGuideStarted(aGuidance: KNGuidance) {
@@ -639,12 +639,22 @@ class NaviActivity : AppCompatActivity(),
         cameraStreamer.stopRecording()
         cameraStreamer.stopWebSocket()
 
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = naviViewModel.saveDriveResultDirect()
+                Log.d("NaviActivity", "✅ 주행 결과 저장 성공: $result")
+            } catch (e: Exception) {
+                Log.e("NaviActivity", "❌ 주행 결과 저장 실패: ${e.message}", e)
+            }
+        }
+
+
         Handler(Looper.getMainLooper()).postDelayed({
             val recordedFile = cameraStreamer.getRecordedFile()
             val eventList = cameraStreamer.getEventList()
 
-            val userId = intent.getIntExtra("user_id", -1)
-            val historyId = intent.getIntExtra("history_id", -1)
+            //val userId = intent.getIntExtra("user_id", -1)
+            //val historyId = intent.getIntExtra("history_id", -1)
 
             if (recordedFile != null && eventList.isNotEmpty()) {
                 CoroutineScope(Dispatchers.IO).launch {
@@ -654,7 +664,7 @@ class NaviActivity : AppCompatActivity(),
 
                     eventList.forEachIndexed { index, (result, timestamp) ->
                         val currentCount = resultCountMap.getOrDefault(result, 0)
-                        if (currentCount >= 1) return@forEachIndexed
+                        if (currentCount >= 2) return@forEachIndexed
 
                         val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
                         val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
@@ -670,21 +680,11 @@ class NaviActivity : AppCompatActivity(),
                         }
                     }
 
-                    UploadS3(this@NaviActivity).uploadClipBatch(clipList, userId, historyId)
+                    UploadS3(this@NaviActivity).uploadClipBatch(clipList)
                 }
             }
         }, 1000)
 
-
-
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val result = naviViewModel.saveDriveResultDirect()
-                Log.d("NaviActivity", "✅ 주행 결과 저장 성공: $result")
-            } catch (e: Exception) {
-                Log.e("NaviActivity", "❌ 주행 결과 저장 실패: ${e.message}", e)
-            }
-        }
 
     }
 }

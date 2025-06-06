@@ -21,17 +21,22 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class UploadS3(private val context: Context) {
 
+    private fun getUserName(): String? {
+        val prefs = context.getSharedPreferences("USER_PREF", Context.MODE_PRIVATE)
+        return prefs.getString("username", null)
+    }
+
     fun uploadClipBatch(
         clipList: List<Triple<String, Long, File>>,  // result, timestamp, file
-        userId: Int,
-        historyId: Int
     ) {
+        val userName = getUserName()
+
         if (clipList.isEmpty()) {
             Log.d("UploadS3", "클립 리스트가 비어 있어 업로드 생략")
             return
         }
-        if (userId == -1 || historyId == -1) {
-            Log.e("UploadS3", "❌ 유효하지 않은 userId/historyId: $userId, $historyId")
+        if (userName.isNullOrBlank()) {
+            Log.e("UploadS3", " 유효하지 않은 사용자 이름")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
@@ -55,8 +60,7 @@ class UploadS3(private val context: Context) {
                     Log.d("UploadS3", "업로드 성공: $s3Url")
 
                     val jsonObject = JSONObject().apply {
-                        put("user_id", userId)
-                        put("history_id", historyId)
+                        put("username", userName)
                         put("s3_url", s3Url)
                         put("result", result)
                     }
