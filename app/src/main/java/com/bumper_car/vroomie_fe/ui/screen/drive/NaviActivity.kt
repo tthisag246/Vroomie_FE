@@ -427,36 +427,32 @@ class NaviActivity : AppCompatActivity(),
         val endDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
         naviViewModel.setEndAt(endDateTime)
 
-        // 이벤트 기반 영상 클립 자르기 및 업로드
+
+        // 전체 영상 파일 및 이벤트 리스트 가져오기
         val uploadS3 = UploadS3(this)
-        val recordedFile = cameraStreamer.getRecordedFile() ?: return
+        val recordedFile = cameraStreamer.getRecordedFile()
         val eventList = cameraStreamer.getEventList()
 
         if (recordedFile != null && eventList.isNotEmpty()) {
-             val outputDir = File(filesDir, "clips").apply { mkdirs() }
-             val clipList = mutableListOf<Triple<String, Long, File>>()
+            val outputDir = File(filesDir, "clips").apply { mkdirs() }
+            val clipList = mutableListOf<Triple<String, Long, File>>()
 
-             eventList.forEachIndexed { index, (result, timestamp) ->
-                 val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
-                 val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
+            eventList.forEachIndexed { index, (result, timestamp) ->
+                val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
+                val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
+                val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000  // 앞 5초
+                val durationSec = 12L
 
-                 val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000  // 앞 5초
-                 val durationSec = 12L
+                val success = uploadS3.cutVideoClip(recordedFile, outputClip, startSec, durationSec)
+                if (success) {
+                    clipList.add(Triple(result, timestamp, outputClip))
+                }
+            }
 
-                 val success = uploadS3.cutVideoClip(recordedFile, outputClip, startSec, durationSec)
-                 if (success) {
-                     clipList.add(Triple(result, timestamp, outputClip))
-                 }
-             }
-
-             // 백엔드에 user_id, history_id 포함해 업로드 호출
-             val userId = intent.getIntExtra("user_id", -1)
-             val historyId = intent.getIntExtra("history_id", -1)
-             uploadS3.uploadClipBatch(clipList, userId, historyId)
+            val userId = intent.getIntExtra("user_id", -1)
+            val historyId = intent.getIntExtra("history_id", -1)
+            uploadS3.uploadClipBatch(clipList, userId, historyId)
         }
-
-
-        
 
         // 주행이 성공적으로 종료되었을 때만 saveDriveResult 호출
         naviViewModel.saveDriveResult( // saveDriveResult에 필요한 인자를 넘겨줘야 함
