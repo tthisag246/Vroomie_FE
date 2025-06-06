@@ -423,6 +423,32 @@ class NaviActivity : AppCompatActivity(),
         val endDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
         naviViewModel.setEndAt(endDateTime)
 
+        // 📼 전체 영상 파일 및 이벤트 리스트 가져오기
+        val uploadS3 = UploadS3(this)
+        val recordedFile = cameraStreamer.getRecordedFile()
+        val eventList = cameraStreamer.getEventList()
+
+        if (recordedFile != null && eventList.isNotEmpty()) {
+            val outputDir = File(filesDir, "clips").apply { mkdirs() }
+            val clipList = mutableListOf<Triple<String, Long, File>>()
+
+            eventList.forEachIndexed { index, (result, timestamp) ->
+                val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
+                val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
+                val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000  // 앞 5초
+                val durationSec = 12L
+
+                val success = uploadS3.cutVideoClip(recordedFile, outputClip, startSec, durationSec)
+                if (success) {
+                    clipList.add(Triple(result, timestamp, outputClip))
+                }
+            }
+
+            val userId = intent.getIntExtra("user_id", -1)
+            val historyId = intent.getIntExtra("history_id", -1)
+            uploadS3.uploadClipBatch(clipList, userId, historyId)
+        }
+
         // 주행이 성공적으로 종료되었을 때만 saveDriveResult 호출
         naviViewModel.saveDriveResult( // saveDriveResult에 필요한 인자를 넘겨줘야 함
             onSuccess = { driveResultResponse ->
