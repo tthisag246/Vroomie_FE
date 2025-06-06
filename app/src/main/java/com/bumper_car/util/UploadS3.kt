@@ -17,6 +17,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import com.bumper_car.vroomie_fe.BuildConfig
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class UploadS3(private val context: Context) {
 
@@ -27,6 +28,10 @@ class UploadS3(private val context: Context) {
     ) {
         if (clipList.isEmpty()) {
             Log.d("UploadS3", "클립 리스트가 비어 있어 업로드 생략")
+            return
+        }
+        if (userId == -1 || historyId == -1) {
+            Log.e("UploadS3", "❌ 유효하지 않은 userId/historyId: $userId, $historyId")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
@@ -84,6 +89,16 @@ class UploadS3(private val context: Context) {
         return try {
             val extractor = MediaExtractor()
             extractor.setDataSource(source.absolutePath)
+            Log.d("UploadS3", "✅ setDataSource 성공: ${source.absolutePath}")
+            Log.d("UploadS3", "📁 자르기 대상 파일 경로: ${source.absolutePath}, 존재 여부: ${source.exists()}, 크기: ${source.length()} bytes")
+            val trackCount = extractor.trackCount
+            Log.d("UploadS3", "🎞 trackCount = $trackCount")
+
+            for (i in 0 until trackCount) {
+                val format = extractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME)
+                Log.d("UploadS3", "🎞 트랙 $i MIME 타입: $mime")
+            }
 
             extractor.selectTrack(0)
             val format = extractor.getTrackFormat(0)
@@ -129,6 +144,7 @@ class UploadS3(private val context: Context) {
             false
         }
     }
+
 
     /*
     fun testFakeEventAndUpload(
