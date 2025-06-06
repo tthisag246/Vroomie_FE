@@ -1,9 +1,9 @@
 package com.bumper_car.vroomie_fe.di
 
-import com.bumper_car.vroomie_fe.data.remote.AuthInterceptor
 import android.util.Log
 import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.data.local.TokenPreferences
+import com.bumper_car.vroomie_fe.data.remote.AuthInterceptor
 import com.bumper_car.vroomie_fe.data.remote.drivehistory.DriveHistoryApi
 import com.bumper_car.vroomie_fe.data.remote.drivetip.DriveTipApi
 import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoNaviApi
@@ -84,7 +84,6 @@ object NetworkModule {
         }
     }
 
-    // 카카오 API 호출을 위한 전용 OkHttpClient를 제공합니다.
     @Provides
     @Singleton
     @Named("KakaoOkHttpClient")
