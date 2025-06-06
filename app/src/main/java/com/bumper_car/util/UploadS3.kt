@@ -17,16 +17,26 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import com.bumper_car.vroomie_fe.BuildConfig
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class UploadS3(private val context: Context) {
 
+    private fun getUserName(): String? {
+        val prefs = context.getSharedPreferences("USER_PREF", Context.MODE_PRIVATE)
+        return prefs.getString("username", null)
+    }
+
     fun uploadClipBatch(
         clipList: List<Triple<String, Long, File>>,  // result, timestamp, file
-        userId: Int,
-        historyId: Int
     ) {
+        val userName = getUserName()
+
         if (clipList.isEmpty()) {
             Log.d("UploadS3", "클립 리스트가 비어 있어 업로드 생략")
+            return
+        }
+        if (userName.isNullOrBlank()) {
+            Log.e("UploadS3", " 유효하지 않은 사용자 이름")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
@@ -50,8 +60,7 @@ class UploadS3(private val context: Context) {
                     Log.d("UploadS3", "업로드 성공: $s3Url")
 
                     val jsonObject = JSONObject().apply {
-                        put("user_id", userId)
-                        put("history_id", historyId)
+                        put("username", userName)
                         put("s3_url", s3Url)
                         put("result", result)
                     }
@@ -84,6 +93,16 @@ class UploadS3(private val context: Context) {
         return try {
             val extractor = MediaExtractor()
             extractor.setDataSource(source.absolutePath)
+            Log.d("UploadS3", "✅ setDataSource 성공: ${source.absolutePath}")
+            Log.d("UploadS3", "📁 자르기 대상 파일 경로: ${source.absolutePath}, 존재 여부: ${source.exists()}, 크기: ${source.length()} bytes")
+            val trackCount = extractor.trackCount
+            Log.d("UploadS3", "🎞 trackCount = $trackCount")
+
+            for (i in 0 until trackCount) {
+                val format = extractor.getTrackFormat(i)
+                val mime = format.getString(MediaFormat.KEY_MIME)
+                Log.d("UploadS3", "🎞 트랙 $i MIME 타입: $mime")
+            }
 
             extractor.selectTrack(0)
             val format = extractor.getTrackFormat(0)
@@ -129,6 +148,7 @@ class UploadS3(private val context: Context) {
             false
         }
     }
+
 
     /*
     fun testFakeEventAndUpload(
