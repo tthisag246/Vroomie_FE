@@ -5,8 +5,8 @@ import com.bumper_car.vroomie_fe.ui.screen.mypage.MyPageUiState
 
 fun User.toMyPageUiState(): MyPageUiState {
     return MyPageUiState(
-        userName = userName.orEmpty(),
-        carModel = carModel.orEmpty(),
+        userName = userName ?: "-",
+        carModel = carModel,
         carHipass = carHipass,
         carType = carType,
         carFuel = carFuel,

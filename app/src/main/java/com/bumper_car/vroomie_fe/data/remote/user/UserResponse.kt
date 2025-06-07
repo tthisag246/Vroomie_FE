@@ -7,16 +7,16 @@ data class UserResponse(
     val userName: String,
 
     @SerializedName("car_model")
-    val carModel: String,
+    val carModel: String? = null,
 
     @SerializedName("car_hipass")
-    val carHipass: Boolean,
+    val carHipass: Boolean? = null,
 
     @SerializedName("car_type")
-    val carType: String,
+    val carType: String? = null,
 
     @SerializedName("car_fuel")
-    val carFuel: String,
+    val carFuel: String? = null,
 
     @SerializedName("user_score")
     val userScore: Int,
