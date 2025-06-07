@@ -195,6 +195,14 @@ class CameraStreamer(
         val pendingRecording = videoCapture?.output
             ?.prepareRecording(context, outputOptions)
 
+        recording = pendingRecording // 👈 오디오 비활성화
+            ?.start(ContextCompat.getMainExecutor(context)) { recordEvent ->
+                when (recordEvent) {
+                    is VideoRecordEvent.Start -> Log.d("CameraStreamer", "🎥 녹화 시작됨")
+                    is VideoRecordEvent.Finalize -> Log.d("CameraStreamer", "✅ 녹화 완료됨: ${outputFile.absolutePath}")
+                }
+            }
+        /*
         recording = if (hasAudioPermission) {
             pendingRecording?.withAudioEnabled()
         } else {
@@ -205,7 +213,7 @@ class CameraStreamer(
                 is VideoRecordEvent.Start -> Log.d("CameraStreamer", "🎥 녹화 시작됨")
                 is VideoRecordEvent.Finalize -> Log.d("CameraStreamer", "✅ 녹화 완료됨: ${outputFile.absolutePath}")
             }
-        }
+        }*/
     }
 
     fun stopRecording() {
