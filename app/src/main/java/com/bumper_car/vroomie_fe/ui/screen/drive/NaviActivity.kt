@@ -148,13 +148,13 @@ class NaviActivity : AppCompatActivity(),
                 isListening = false
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (matches.isNullOrEmpty()) {
-                    Log.w("STT", "❌ 결과 없음 (matches 비어있음)")
+                    Log.w("STT", "결과 없음 (matches 비어있음)")
                     startWakewordLoop()
                     return
                 }
 
                 val heard = matches[0].lowercase(Locale.getDefault())
-                Log.d("STT", "🧠 인식된 문장: $heard")
+                Log.d("STT", " 인식된 문장: $heard")
 
                 if (isWakewordDetected) {
                     isGptSpeaking = true
@@ -172,7 +172,7 @@ class NaviActivity : AppCompatActivity(),
                                 startSTT()
                             }
                         } catch (e: Exception) {
-                            Log.e("GPT", "❌ GPT 호출 실패: ${e.message}")
+                            Log.e("GPT", "GPT 호출 실패: ${e.message}")
                             withContext(Dispatchers.Main) {
                                 isGptSpeaking = false
                                 startWakewordLoop()
@@ -197,7 +197,7 @@ class NaviActivity : AppCompatActivity(),
 
             override fun onError(error: Int) {
                 isListening = false
-                Log.e("Wakeword", "❌ 오류 발생: $error")
+                Log.e("Wakeword", "오류 발생: $error")
 
                 // 너무 빠르게 루프 돌지 않도록 딜레이 추가
                 Handler(Looper.getMainLooper()).postDelayed({
@@ -214,7 +214,7 @@ class NaviActivity : AppCompatActivity(),
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {
                 isListening = false
-                Log.d("VoiceDebug", "🎤 발화 종료됨")
+                Log.d("VoiceDebug", "발화 종료됨")
                 Handler(Looper.getMainLooper()).postDelayed({
                     if (!isGptSpeaking && !isWakewordDetected) {
                         startWakewordLoop()
@@ -285,18 +285,18 @@ class NaviActivity : AppCompatActivity(),
     }
     private fun startWakewordLoop() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.e("VoiceDebug", "❌ RECORD_AUDIO 권한 없음")
+            Log.e("VoiceDebug", "RECORD_AUDIO 권한 없음")
             return
         }
 
         if (isListening) {
-            Log.d("VoiceDebug", "🚫 이미 인식 중이라 루프 시작 안 함")
+            Log.d("VoiceDebug", "이미 인식 중이라 루프 시작 안 함")
             return
         }
 
         isWakewordDetected = false
         isListening = true
-        Log.d("VoiceDebug", "🎙️ Wakeword 루프 시작")
+        Log.d("VoiceDebug", "Wakeword 루프 시작")
         speechRecognizer.startListening(recognizerIntent)
     }
 
