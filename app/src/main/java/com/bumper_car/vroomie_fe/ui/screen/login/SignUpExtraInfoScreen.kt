@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -48,13 +49,12 @@ fun SignUpExtraInfoScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-
     Scaffold(
         topBar = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(Color(0xFFFAFAFA))
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -65,7 +65,7 @@ fun SignUpExtraInfoScreen(
                 )
             }
         },
-        containerColor = Color(0xFFFFFFFF),
+        containerColor = Color(0xFFFAFAFA),
         content = { innerPadding ->
             Column(
                 modifier = Modifier
@@ -138,10 +138,10 @@ fun SignUpExtraInfoScreen(
                         onCheckedChange = { viewModel.updateCarHipass(it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color(0xFF0064FF),
-                            checkedTrackColor = Color.White,
+                            checkedTrackColor = Color.Transparent,
                             checkedBorderColor = Color(0xFF0064FF),
                             uncheckedThumbColor = Color(0xFFADADAD),
-                            uncheckedTrackColor = Color.White
+                            uncheckedTrackColor = Color.Transparent
                             )
                     )
                 }
@@ -189,7 +189,7 @@ fun SignUpExtraInfoScreen(
                         }
                     )
                 }
-
+                Spacer(Modifier.height(16.dp))
                 // 등록하기 버튼
                 Button(
                     onClick = {

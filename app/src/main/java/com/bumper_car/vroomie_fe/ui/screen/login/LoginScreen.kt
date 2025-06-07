@@ -1,7 +1,6 @@
 package com.bumper_car.vroomie_fe.ui.screen.login
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -23,29 +22,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.R
-import com.bumper_car.vroomie_fe.data.local.TokenPreferences
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-
-fun onClickKakaoLoginButton(context: Context) {
-    val clientId = BuildConfig.KAKAO_REST_API_KEY
-    val redirectUri = "http://${BuildConfig.SERVER_IP_ADDRESS}:8080/auth/kakao/callback"
-    val url = "https://kauth.kakao.com/oauth/authorize" +
-            "?client_id=$clientId" +
-            "&redirect_uri=$redirectUri" +
-            "&response_type=code"
-
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-    context.startActivity(intent)
-}
 
 @Composable
 fun LoginScreen(
-    navController: NavHostController
+    navController: NavHostController,
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -70,18 +55,15 @@ fun LoginScreen(
         if (!handled.value) {
             val uri = intent?.data
             if (uri?.scheme == "vroomie" && uri.host == "login-success") {
-                val token = uri.getQueryParameter("token")
-                if (!token.isNullOrEmpty()) {
-                    val tokenPreferences = TokenPreferences(context)
-                    CoroutineScope(Dispatchers.IO).launch {
-                        tokenPreferences.setToken(token)
-                    }
-                    navController.navigate("extra_info") {
-                        popUpTo("login") { inclusive = true }
-                        launchSingleTop = true
-                    }
-                    handled.value = true
+                val token = uri.getQueryParameter("token") ?: return@LaunchedEffect
+
+                viewModel.saveToken(token)
+
+                navController.navigate("extra_info") {
+                    popUpTo("login") { inclusive = true }
+                    launchSingleTop = true
                 }
+                handled.value = true
             }
         }
     }

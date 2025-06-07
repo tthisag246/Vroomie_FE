@@ -57,7 +57,7 @@ fun MyPageScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(Color(0xFFFAFAFA))
                     .padding(vertical = 12.dp)
             ) {
                 Row(
@@ -78,26 +78,16 @@ fun MyPageScreen(
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = { /* TODO: 설정 화면 이동 */ }
-                    ) {
-                        Icon(
-                            painter = rememberVectorPainter(Icons.Default.Settings),
-                            contentDescription = "설정",
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
                 }
             }
         },
-        containerColor = Color.White,
+        containerColor = Color(0xFFF2F2F2),
         content = { innerPadding ->
             LazyColumn(
                 contentPadding = innerPadding,
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFEEEEEE))
+                    .background(Color(0xFFF2F2F2))
             ) {
                 item {
                     // 프로필 섹션
@@ -105,14 +95,14 @@ fun MyPageScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
-                            .background(Color.White)
+                            .background(Color(0xFFFAFAFA))
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 16.dp)
+                                .padding(bottom = 24.dp)
                         ) {
                             Image(
                                 painter = painterResource(
@@ -130,7 +120,7 @@ fun MyPageScreen(
                                     .size(120.dp)
                                     .clip(CircleShape)
                                     .border(1.dp, Color.LightGray, CircleShape)
-                                    .padding(4.dp)
+                                    .padding(12.dp)
                             )
 
                             Column {
@@ -156,13 +146,13 @@ fun MyPageScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
-                            .background(Color.White)
+                            .background(Color(0xFFFAFAFA))
                     ) {
                         // 프로필 설정
-                        Text("프로필 설정", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
-                        Text("로그아웃", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
-                        HorizontalDivider()
-                        Text("회원 탈퇴", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
+                        Text("프로필 설정", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+                        Text("로그아웃", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
+                        HorizontalDivider(color = Color.LightGray, modifier = Modifier.padding(horizontal = 12.dp))
+                        Text("회원 탈퇴", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
                     }
                 }
 
@@ -171,15 +161,15 @@ fun MyPageScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
-                            .background(Color.White)
+                            .background(Color(0xFFFAFAFA))
                     ) {
                         // 약관
-                        Text("약관 및 개인정보 처리 동의", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
-                        Text("이용자 약관", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
-                        HorizontalDivider()
-                        Text("개인정보 처리방침", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
-                        HorizontalDivider()
-                        Text("개인정보 방침 동의 및 철회", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
+                        Text("약관 및 개인정보 처리 동의", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+                        Text("이용자 약관", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
+                        HorizontalDivider(color = Color.LightGray, modifier = Modifier.padding(horizontal = 12.dp))
+                        Text("개인정보 처리방침", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
+                        HorizontalDivider(color = Color.LightGray, modifier = Modifier.padding(horizontal = 12.dp))
+                        Text("개인정보 방침 동의 및 철회", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
                     }
                 }
 
@@ -188,15 +178,15 @@ fun MyPageScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
-                            .background(Color.White)
+                            .background(Color(0xFFFAFAFA))
                     ) {
                         // 고객지원
-                        Text("고객 지원", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
-                        Text("자주 묻는 질문", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
-                        HorizontalDivider()
-                        Text("제안/의견 보내기", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
-                        HorizontalDivider()
-                        Text("버전 정보", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 8.dp))
+                        Text("고객 지원", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+                        Text("자주 묻는 질문", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
+                        HorizontalDivider(color = Color.LightGray, modifier = Modifier.padding(horizontal = 12.dp))
+                        Text("제안/의견 보내기", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
+                        HorizontalDivider(color = Color.LightGray, modifier = Modifier.padding(horizontal = 12.dp))
+                        Text("버전 정보", modifier = Modifier.clickable { /* TODO */ }.padding(horizontal = 24.dp, vertical = 12.dp))
                     }
                 }
             }

@@ -1,16 +1,8 @@
 package com.bumper_car.vroomie_fe.data.remote.auth
 
 import retrofit2.http.GET
-import retrofit2.http.Header
 
 interface AuthApi {
-    @GET("/me")
-    suspend fun getMyInfo(
-        @Header("Authorization") token: String
-    ): GetMyInfoResponse
+    @GET("/auth/me")
+    suspend fun getMyInfo(): GetMyInfoResponse
 }
-
-data class GetMyInfoResponse(
-    val kakao_id: String,
-    val user_name: String
-)

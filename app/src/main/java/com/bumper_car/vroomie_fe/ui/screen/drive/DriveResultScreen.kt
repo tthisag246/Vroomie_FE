@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -91,23 +92,36 @@ fun DriveResultScreen(
                         .fillMaxWidth()
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "${uiState.startLocation}",
+                            text = uiState.startLocation,
                             fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .weight(1f)
                         )
+
                         Text(
-                            "→",
+                            text = "→",
                             fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
+
                         Text(
-                            "${uiState.endLocation}",
+                            text = uiState.endLocation,
                             fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .weight(1f)
                         )
                     }
                     IconButton(
@@ -138,9 +152,9 @@ fun DriveResultScreen(
                             .padding(20.dp)
                     ) {
                         Text(
-                            "자동차도로주행시험 응시표",
+                            "Vroomie 운전연수 응시표",
                             fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -158,7 +172,11 @@ fun DriveResultScreen(
                                 ) {
                                     Row {
                                         TableCell("응시일자", true, Modifier.weight(3f))
-                                        TableCell(uiState.startAt.toDateFormat(), false, Modifier.weight(4f))
+                                        TableCell(
+                                            uiState.startAt.toDateFormat(),
+                                            false,
+                                            Modifier.weight(4f)
+                                        )
                                     }
                                     Row {
                                         TableCell("주행거리", true, Modifier.weight(3f))
@@ -170,7 +188,11 @@ fun DriveResultScreen(
                                     }
                                     Row {
                                         TableCell("주행시간", true, Modifier.weight(3f))
-                                        TableCell(uiState.duration.toHourMinuteFormat(), false, Modifier.weight(4f))
+                                        TableCell(
+                                            uiState.duration.toHourMinuteFormat(),
+                                            false,
+                                            Modifier.weight(4f)
+                                        )
                                     }
                                 }
                                 Box(
@@ -186,16 +208,21 @@ fun DriveResultScreen(
                                         modifier = Modifier
                                             .fillMaxSize()
                                     )
+                                    val scoreString = uiState.score.toString()
                                     Text(
-                                        text = uiState.score.toString(),
+                                        text = scoreString,
                                         fontFamily = FontFamily(Font(R.font.bm_euljiro_10_years_later)),
-                                        fontSize = 60.sp,
+                                        fontSize = when (scoreString.length) {
+                                            1 -> 80.sp
+                                            2 -> 72.sp
+                                            else -> 56.sp
+                                        },
                                         fontWeight = FontWeight.Black,
                                         color = Color.Red
                                     )
                                 }
                             }
-                            TableCell("항목", true, Modifier.fillMaxWidth())
+                            TableCell("평가항목", true, Modifier.fillMaxWidth())
                             Row {
                                 Column(
                                     modifier = Modifier
@@ -258,7 +285,6 @@ fun DriveResultScreen(
                             }
                         }
                     }
-
                 }
 
                 item {
@@ -267,33 +293,35 @@ fun DriveResultScreen(
                             .fillMaxWidth()
                             .background(Color.White, RoundedCornerShape(20.dp))
                             .padding(20.dp)
+                            .padding(vertical = 8.dp)
                     ) {
                         Text(
                             "Feedback",
                             fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
+                                .padding(bottom = 4.dp)
                         )
 
                         uiState.feedback.forEachIndexed { index, feedback ->
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp)
+                                    .padding(24.dp)
                             ) {
                                 Text(
                                     "${index + 1}. ${feedback.title}",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                Spacer(Modifier.height(4.dp))
+                                Spacer(Modifier.height(8.dp))
                                 Text(
-                                    feedback.content,
-                                    fontSize = 14.sp,
-                                    color = Color.LightGray
+                                    feedback.content.replace(" ", "\u00A0"),
+                                    fontSize = 18.sp,
+                                    color = Color.DarkGray
                                 )
-                                Spacer(Modifier.height(12.dp))
+                                Spacer(Modifier.height(16.dp))
 
                                 val context = LocalContext.current
                                 val exoPlayer = remember(feedback.videoUrl) {
@@ -315,8 +343,7 @@ fun DriveResultScreen(
                                     },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(220.dp)
-                                        .padding(8.dp)
+                                        .height(200.dp)
                                         .clip(RoundedCornerShape(12.dp))
                                 )
                             }
