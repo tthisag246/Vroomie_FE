@@ -26,10 +26,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.R
-import com.bumper_car.vroomie_fe.data.local.TokenPreferences
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(

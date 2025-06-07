@@ -1,9 +1,11 @@
 package com.bumper_car.vroomie_fe.ui.screen.drive
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.media.AudioManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -57,6 +59,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+import android.os.Handler
+import android.os.Looper
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import com.bumper_car.util.VoiceService
+import com.bumper_car.vroomie_fe.data.remote.RetrofitInstance
+import com.bumper_car.vroomie_fe.data.remote.gpt.GptApi
+import com.bumper_car.vroomie_fe.data.remote.gpt.GptRequest
+import kotlinx.coroutines.delay
+
 
 @AndroidEntryPoint
 class NaviActivity : AppCompatActivity(),
@@ -70,6 +83,13 @@ class NaviActivity : AppCompatActivity(),
     private lateinit var naviView: KNNaviView
     private lateinit var previewView: PreviewView
     private lateinit var cameraStreamer: CameraStreamer
+
+    private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var recognizerIntent: Intent
+    private var isWakewordDetected = false
+    private var isGptSpeaking = false
+    private var isListening = false
+
 
     // TTS
     private lateinit var tts: TextToSpeech
@@ -94,6 +114,11 @@ class NaviActivity : AppCompatActivity(),
         val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 100)
+        }
+
         if (fineLocationGranted && coarseLocationGranted) {
             // 위치 권한 허용됨: 모든 위치 기반 기능 초기화 및 시작
             Toast.makeText(this, "위치 권한이 허용되었습니다.", Toast.LENGTH_SHORT).show()
@@ -116,6 +141,101 @@ class NaviActivity : AppCompatActivity(),
                 tts.language = Locale.KOREAN
             }
         }
+        // STT 초기화
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+            override fun onResults(results: Bundle?) {
+                isListening = false
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (matches.isNullOrEmpty()) {
+                    Log.w("STT", "결과 없음 (matches 비어있음)")
+                    startWakewordLoop()
+                    return
+                }
+
+                val heard = matches[0].lowercase(Locale.getDefault())
+                Log.d("STT", " 인식된 문장: $heard")
+
+                if (isWakewordDetected) {
+                    isGptSpeaking = true
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val response = RetrofitInstance.create<GptApi>().ask(GptRequest(message = heard))
+                            val answer = response.body()?.reply ?: "죄송해요, 이해하지 못했어요."
+
+                            withContext(Dispatchers.Main) {
+                                tts.speak(answer, TextToSpeech.QUEUE_FLUSH, null, null)
+                                while (tts.isSpeaking) {
+                                    delay(100) // TTS 완료될 때까지 대기
+                                }
+                                isGptSpeaking = false
+                                startSTT()
+                            }
+                        } catch (e: Exception) {
+                            Log.e("GPT", "GPT 호출 실패: ${e.message}")
+                            withContext(Dispatchers.Main) {
+                                isGptSpeaking = false
+                                startWakewordLoop()
+                            }
+                        }
+                    }
+                    isWakewordDetected = false
+
+                } else if (heard.contains("부르미")) {
+                    isWakewordDetected = true
+                    tts.stop()
+                    tts.speak("네, 말씀하세요", TextToSpeech.QUEUE_FLUSH, null, null)
+                    Handler(mainLooper).postDelayed({
+                        startSTT()
+                    }, 2000)
+
+                } else {
+                    startWakewordLoop()
+                }
+            }
+
+
+            override fun onError(error: Int) {
+                isListening = false
+                Log.e("Wakeword", "오류 발생: $error")
+
+                // 너무 빠르게 루프 돌지 않도록 딜레이 추가
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (!isGptSpeaking && !isWakewordDetected) {
+                        startWakewordLoop()
+                    }
+                }, 1500) // 1.5초 후 다시 시도
+            }
+
+            // 생략 가능한 override들
+            override fun onReadyForSpeech(params: Bundle?) {Log.d("VoiceDebug", "🎤 음성 인식 준비됨")}
+            override fun onBeginningOfSpeech() {Log.d("VoiceDebug", "🎤 사용자 말 시작함")}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {
+                isListening = false
+                Log.d("VoiceDebug", "발화 종료됨")
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (!isGptSpeaking && !isWakewordDetected) {
+                        startWakewordLoop()
+                    }
+                }, 1500)
+            }
+            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        })
+        recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.KOREAN)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+        }
+
+        startWakewordLoop()
+
 
         naviView = findViewById(R.id.navi_view)
         previewView = findViewById(R.id.preview_view)
@@ -163,6 +283,29 @@ class NaviActivity : AppCompatActivity(),
             )
         }
     }
+    private fun startWakewordLoop() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("VoiceDebug", "RECORD_AUDIO 권한 없음")
+            return
+        }
+
+        if (isListening) {
+            Log.d("VoiceDebug", "이미 인식 중이라 루프 시작 안 함")
+            return
+        }
+
+        isWakewordDetected = false
+        isListening = true
+        Log.d("VoiceDebug", "Wakeword 루프 시작")
+        speechRecognizer.startListening(recognizerIntent)
+    }
+
+    private fun startSTT() {
+        if (isListening) return
+        isListening = true
+        speechRecognizer.startListening(recognizerIntent)
+    }
+
 
     private fun extractCityAndProvince(fullAddress: String): String {
         val parts = fullAddress.split(" ")
@@ -423,6 +566,9 @@ class NaviActivity : AppCompatActivity(),
         val endDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
         naviViewModel.setEndAt(endDateTime)
 
+        cameraStreamer.stopRecording()
+        cameraStreamer.stopWebSocket()
+
         // 주행이 성공적으로 종료되었을 때만 saveDriveResult 호출
         naviViewModel.saveDriveResult( // saveDriveResult에 필요한 인자를 넘겨줘야 함
             onSuccess = { driveResultResponse ->
@@ -437,6 +583,43 @@ class NaviActivity : AppCompatActivity(),
                 Toast.makeText(this, "주행 결과 저장 실패", Toast.LENGTH_SHORT).show()
             }
         )
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            val recordedFile = cameraStreamer.getRecordedFile()
+            val eventList = cameraStreamer.getEventList()
+
+            //val userId = intent.getIntExtra("user_id", -1)
+            //val historyId = intent.getIntExtra("history_id", -1)
+
+            if (recordedFile != null && eventList.isNotEmpty()) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val outputDir = File(filesDir, "clips").apply { mkdirs() }
+                    val clipList = mutableListOf<Triple<String, Long, File>>()
+                    val resultCountMap = mutableMapOf<String, Int>()
+
+                    eventList.forEachIndexed { index, (result, timestamp) ->
+                        val currentCount = resultCountMap.getOrDefault(result, 0)
+                        if (currentCount >= 2) return@forEachIndexed
+
+                        val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
+                        val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
+                        val startSec = (timestamp - 2000).coerceAtLeast(0) / 1000
+                        val durationSec = 7L
+
+                        val success = UploadS3(this@NaviActivity).cutVideoClip(recordedFile, outputClip, startSec, durationSec)
+                        Log.d("UploadS3", "클립 자르기 결과: $success, 파일: ${outputClip.absolutePath}")
+
+                        if (success) {
+                            clipList.add(Triple(result, timestamp, outputClip))
+                            resultCountMap[result] = currentCount + 1
+                        }
+                    }
+
+                    UploadS3(this@NaviActivity).uploadClipBatch(clipList)
+                }
+            }
+        }, 1000)
+
     }
 
     override fun guidanceGuideStarted(aGuidance: KNGuidance) {
@@ -460,35 +643,6 @@ class NaviActivity : AppCompatActivity(),
 
     override fun guidanceRouteUnchanged(aGuidance: KNGuidance) {
         naviView.guidanceRouteUnchanged(aGuidance)
-
-        // 녹화 종료 처리
-        cameraStreamer.stopRecording()
-        cameraStreamer.stopWebSocket() // ← temp
-
-
-        // 이벤트 기반 영상 클립 자르기 및 업로드
-        val uploadS3 = UploadS3(this)
-        val recordedFile = cameraStreamer.getRecordedFile() ?: return
-        val eventList = cameraStreamer.getEventList()
-
-        val outputDir = File(filesDir, "clips").apply { mkdirs() }
-        val clipList = mutableListOf<Triple<String, Long, File>>()
-
-        eventList.forEachIndexed { index, (result, timestamp) ->
-            val outputClip = File(outputDir, "clip_${index}_$result.mp4")
-            val startSec = (timestamp - 5000).coerceAtLeast(0) / 1000  // 앞 5초 (초 단위)
-            val durationSec = 12L  // 총 12초
-
-            val success = uploadS3.cutVideoClip(recordedFile, outputClip, startSec, durationSec)
-            if (success) {
-                clipList.add(Triple(result, timestamp, outputClip))
-            }
-        }
-
-        // 백엔드에 user_id, history_id 포함해 업로드 호출
-        val userId = intent.getIntExtra("user_id", -1)
-        val historyId = intent.getIntExtra("history_id", -1)
-        uploadS3.uploadClipBatch(clipList, userId, historyId)
     }
 
     override fun guidanceRouteUnchangedWithError(aGuidance: KNGuidance, aError: KNError) {
@@ -580,6 +734,11 @@ class NaviActivity : AppCompatActivity(),
         aVoiceGuide: KNGuide_Voice,
         aNewData: MutableList<ByteArray>
     ): Boolean {
+        /*if (isGptSpeaking) {
+            Log.d("VoiceGuide", "🤖 GPT 응답 중이라 내비게이션 음성 안내 생략")
+            return false
+        }*/
+
         if (aVoiceGuide.voiceCode == KNVoiceCode.KNVoiceCode_Turn) {
             val direction = aVoiceGuide.guideObj as? KNDirection ?: return true
 
@@ -613,13 +772,19 @@ class NaviActivity : AppCompatActivity(),
         naviView.didUpdateCitsGuide(aGuidance, aCitsGuide)
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
         tts.stop()
         tts.shutdown()
+        speechRecognizer.destroy()
 
         val endDateTime = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).format(Date())
         naviViewModel.setEndAt(endDateTime)
+
+        cameraStreamer.stopRecording()
+        cameraStreamer.stopWebSocket()
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = naviViewModel.saveDriveResultDirect()
@@ -628,6 +793,44 @@ class NaviActivity : AppCompatActivity(),
                 Log.e("NaviActivity", "❌ 주행 결과 저장 실패: ${e.message}", e)
             }
         }
+
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            val recordedFile = cameraStreamer.getRecordedFile()
+            val eventList = cameraStreamer.getEventList()
+
+            //val userId = intent.getIntExtra("user_id", -1)
+            //val historyId = intent.getIntExtra("history_id", -1)
+
+            if (recordedFile != null && eventList.isNotEmpty()) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val outputDir = File(filesDir, "clips").apply { mkdirs() }
+                    val clipList = mutableListOf<Triple<String, Long, File>>()
+                    val resultCountMap = mutableMapOf<String, Int>()
+
+                    eventList.forEachIndexed { index, (result, timestamp) ->
+                        val currentCount = resultCountMap.getOrDefault(result, 0)
+                        if (currentCount >= 2) return@forEachIndexed
+
+                        val timestampStr = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))
+                        val outputClip = File(outputDir, "clip_${timestampStr}_${index}_$result.mp4")
+                        val startSec = (timestamp - 2000).coerceAtLeast(0) / 1000
+                        val durationSec = 7L
+
+                        val success = UploadS3(this@NaviActivity).cutVideoClip(recordedFile, outputClip, startSec, durationSec)
+                        Log.d("UploadS3", "클립 자르기 결과: $success, 파일: ${outputClip.absolutePath}")
+
+                        if (success) {
+                            clipList.add(Triple(result, timestamp, outputClip))
+                            resultCountMap[result] = currentCount + 1
+                        }
+                    }
+
+                    UploadS3(this@NaviActivity).uploadClipBatch(clipList)
+                }
+            }
+        }, 1000)
+
 
     }
 }

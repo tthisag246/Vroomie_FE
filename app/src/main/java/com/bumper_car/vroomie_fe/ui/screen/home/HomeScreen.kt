@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -384,22 +385,27 @@ fun HomeScreen(
                         val topLeft = Offset(center.x - innerRadius, center.y - innerRadius)
 
                         // 그라데이션 Progress 원
-                        drawArc(
-                            brush = Brush.sweepGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color(0xFF67FFE7),
-                                    0.5f to Color(0xFF51A2FF),
-                                    1.0f to Color(0xFF9B4AFF)
+                        withTransform({
+                            rotate(degrees = 135f, pivot = center)
+                        }) {
+                            drawArc(
+                                brush = Brush.sweepGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color(0xFF67FFE7),
+                                        0.375f to Color(0xFF51A2FF),
+                                        0.75f to Color(0xFF9B4AFF),
+                                        1.0f to Color(0xFF67FFE7)
+                                    ),
+                                    center = center
                                 ),
-                                center = center
-                            ),
-                            startAngle = 135f,
-                            sweepAngle = sweepAnim.value,
-                            useCenter = false,
-                            topLeft = topLeft,
-                            size = arcSize,
-                            style = stroke
-                        )
+                                startAngle = 0f,
+                                sweepAngle = sweepAnim.value,
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = arcSize,
+                                style = stroke
+                            )
+                        }
                     }
                 }
 
