@@ -204,7 +204,7 @@ class NaviActivity : AppCompatActivity(),
                     if (!isGptSpeaking && !isWakewordDetected) {
                         startWakewordLoop()
                     }
-                }, 21500) // 2초 후 다시 시도
+                }, 1500) // 1.5초 후 다시 시도
             }
 
             // 생략 가능한 override들
