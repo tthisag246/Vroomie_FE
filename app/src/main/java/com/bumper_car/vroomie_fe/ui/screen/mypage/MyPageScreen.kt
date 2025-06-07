@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -132,7 +129,7 @@ fun MyPageScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("차 모델 | ${uiState.carModel}", fontSize = 14.sp)
                                 Text(
-                                    "하이패스 | ${if (uiState.carHipass == true) "보유 중" else "미보유"}",
+                                    "하이패스 | ${if (uiState.carHipass == null) "-" else if (uiState.carHipass == true) "보유 중" else "미보유"}",
                                     fontSize = 14.sp
                                 )
                                 Text("${uiState.carType} | ${uiState.carFuel}", fontSize = 14.sp)

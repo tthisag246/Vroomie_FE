@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -40,7 +39,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,20 +76,6 @@ fun DriveScoreScreen(
 
     val density = LocalDensity.current
 
-    val selectedDriveStats = uiState.monthlyDetailStatsUiState.getOrElse(uiState.selectedIndex) {
-        DetailStatsUiState(
-            averageScore = 0,
-            totalDistance = 0f,
-            totalDuration = 0,
-            totalSpeedingCount = 0,
-            totalSuddenAccelerationCount = 0,
-            totalSuddenDecelerationCount = 0,
-            totalSafeDistanceViolationCount = 0,
-            totalLaneDeviationRightCount = 0,
-            totalLaneDeviationLeftCount = 0
-        )
-    }
-
     fun Int.toHourMinuteFormat(): String {
         val hours = this / 60
         val minutes = this % 60
@@ -104,6 +88,24 @@ fun DriveScoreScreen(
         }
     }
 
+    val sortedMonths = uiState.monthlyScores.sortedWith(compareBy({ it.year }, { it.month }))
+
+    val selectedMonth = sortedMonths.getOrNull(uiState.selectedIndex)?.month
+
+    val selectedDriveStats = selectedMonth
+        ?.let { monthKey -> uiState.monthlyDetailStatsUiState.get(monthKey) }
+        ?: DetailStatsUiState(
+            averageScore = 0,
+            totalDistance = 0f,
+            totalDuration = 0,
+            totalSpeedingCount = 0,
+            totalSuddenAccelerationCount = 0,
+            totalSuddenDecelerationCount = 0,
+            totalSafeDistanceViolationCount = 0,
+            totalLaneDeviationRightCount = 0,
+            totalLaneDeviationLeftCount = 0
+        )
+
     val statItems = listOf(
         "운전점수" to "${selectedDriveStats.averageScore}점",
         "운전거리" to "${selectedDriveStats.totalDistance}km",
@@ -115,8 +117,6 @@ fun DriveScoreScreen(
         "차선 치우침(우)" to "${selectedDriveStats.totalLaneDeviationRightCount}회",
         "차선 치우침(좌)" to "${selectedDriveStats.totalLaneDeviationLeftCount}회"
     )
-
-    val sortedMonths = uiState.monthlyScores.sortedWith(compareBy({ it.year }, { it.month }))
 
     // 초기 스크롤 여부
     val isInitialScrollDone = remember { mutableStateOf(false) }
