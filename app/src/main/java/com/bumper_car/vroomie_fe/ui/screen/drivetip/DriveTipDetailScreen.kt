@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -40,6 +41,7 @@ import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import com.bumper_car.vroomie_fe.R
+import com.bumper_car.vroomie_fe.ui.theme.nanumFamily
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -73,7 +75,7 @@ fun DriveTipDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(Color(0xFFFAFAFA))
                     .padding(vertical = 12.dp)
             ) {
                 Row(
@@ -97,14 +99,13 @@ fun DriveTipDetailScreen(
                 }
             }
         },
-        containerColor = Color.White,
+        containerColor = Color(0xFFF2F2F2),
         content = { innerPadding ->
             LazyColumn(
                 contentPadding = innerPadding,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .background(Color(0xFFF2F2F2))
             ) {
                 item {
                     Box(
@@ -119,21 +120,28 @@ fun DriveTipDetailScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                         )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.4f))
-                        )
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
-                                .fillMaxWidth()
-                                .background(Color.Black.copy(alpha = 0.5f))
-                                .padding(12.dp)
+                                .fillMaxSize()
+                                .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Black.copy(alpha = 0f),
+                                        Color.Black.copy(alpha = 0f),
+                                        Color.Black.copy(alpha = 0.1f),
+                                        Color.Black.copy(alpha = 0.5f)
+                                    ),
+                                    startY = 0f,
+                                    endY = Float.POSITIVE_INFINITY
+                                )
+                            )
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.Bottom
                         ) {
                             Text(
                                 text = uiState.title,
-                                fontSize = 20.sp,
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -149,15 +157,17 @@ fun DriveTipDetailScreen(
 
                 item {
                     MarkdownText(
-                        markdown = uiState.content,
+                        markdown = uiState.content.replace(" ", "\u00A0"),
                         modifier = Modifier
-                            .padding(12.dp)
+                            .padding(16.dp)
+                            .padding(vertical = 14.dp)
                             .fillMaxWidth()
                             .wrapContentHeight(),
                         style = TextStyle(
                             color = Color.DarkGray,
-                            fontSize = 16.sp,
-                            lineHeight = 20.sp
+                            fontSize = 20.sp,
+                            fontFamily = nanumFamily,
+                            lineHeight = 32.sp
                         )
                     )
                 }

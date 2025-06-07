@@ -1,8 +1,11 @@
 package com.bumper_car.vroomie_fe.di
 
+import com.bumper_car.vroomie_fe.data.remote.auth.AuthRemoteDataSource
 import com.bumper_car.vroomie_fe.data.remote.drivehistory.DriveHistoryRemoteDataSource
 import com.bumper_car.vroomie_fe.data.remote.drivetip.DriveTipRemoteDataSource
 import com.bumper_car.vroomie_fe.data.remote.user.UserRemoteDataSource
+import com.bumper_car.vroomie_fe.data.repository.AuthRepository
+import com.bumper_car.vroomie_fe.data.repository.AuthRepositoryImpl
 import com.bumper_car.vroomie_fe.data.repository.DriveHistoryRepository
 import com.bumper_car.vroomie_fe.data.repository.DriveHistoryRepositoryImpl
 import com.bumper_car.vroomie_fe.data.repository.DriveTipRepository
@@ -35,4 +38,10 @@ object RepositoryModule {
     fun provideDriveHistoryRepository(
         remote: DriveHistoryRemoteDataSource
     ): DriveHistoryRepository = DriveHistoryRepositoryImpl(remote)
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        remote: AuthRemoteDataSource
+    ): AuthRepository = AuthRepositoryImpl(remote)
 }

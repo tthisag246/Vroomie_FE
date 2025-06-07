@@ -26,9 +26,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,7 +63,7 @@ fun DriveHistoryScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(Color(0xFFFAFAFA))
                     .padding(vertical = 12.dp)
             ) {
                 Row(
@@ -90,13 +87,13 @@ fun DriveHistoryScreen(
                 }
             }
         },
-        containerColor = Color(0xFFDCDCDC),
+        containerColor = Color(0xFFF2F2F2),
         content = { innerPadding ->
             LazyColumn(
                 contentPadding = innerPadding,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
+                    .background(Color(0xFFF2F2F2)),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(uiState.histories) { history ->
@@ -104,21 +101,19 @@ fun DriveHistoryScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { navController.navigate("drive_history/${history.historyId}") }
-                            .background(Color(0xFFFFFFFF), RoundedCornerShape(12.dp))
-                            .padding(12.dp)
+                            .background(Color(0xFFFAFAFA), RoundedCornerShape(12.dp))
+                            .padding(24.dp)
                     ) {
                         Image(
                             painter = painterResource(
                                 when {
                                     history.score < 20 -> R.drawable.drive_history_emoji_1
-                                    history.score < 40 -> R.drawable.drive_history_emoji_2
-                                    history.score < 60 -> R.drawable.drive_history_emoji_3
-                                    history.score < 80 -> R.drawable.drive_history_emoji_4
-                                    else -> R.drawable.drive_history_emoji_5
+                                    history.score < 60 -> R.drawable.drive_history_emoji_2
+                                    else -> R.drawable.drive_history_emoji_3
                                 }
                             ),
                             contentDescription = "운전 점수 이모지",
-                            modifier = Modifier.size(80.dp)
+                            modifier = Modifier.size(72.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

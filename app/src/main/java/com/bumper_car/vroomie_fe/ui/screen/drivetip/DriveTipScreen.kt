@@ -1,6 +1,5 @@
 package com.bumper_car.vroomie_fe.ui.screen.drivetip
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +33,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -70,7 +70,7 @@ fun DriveTipScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(Color(0xFFFAFAFA))
                     .padding(vertical = 12.dp)
             ) {
                 Row(
@@ -94,21 +94,24 @@ fun DriveTipScreen(
                 }
             }
         },
-        containerColor = Color.White,
+        containerColor = Color(0xFFF2F2F2),
         content = { innerPadding ->
             LazyColumn(
                 contentPadding = innerPadding,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .background(Color(0xFFF2F2F2))
             ) {
-                items(uiState.tips) { tip ->
+                items(
+                    uiState.tips
+                    .sortedByDescending { LocalDateTime.parse(it.createAt) }
+                ) { tip ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { navController.navigate("drive_tip/${tip.tipId}") }
-                            .padding(vertical = 12.dp),
+                            .background(Color(0xFFFAFAFA))
+                            .padding(24.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(
@@ -118,14 +121,15 @@ fun DriveTipScreen(
                         ) {
                             Text(
                                 text = tip.title,
-                                fontSize = 16.sp,
+                                fontSize = 18.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = tip.createAt.toDateFormat(),
-                                fontSize = 14.sp,
-                                maxLines = 2,
+                                fontSize = 16.sp,
                                 color = Color.Gray
                             )
                         }

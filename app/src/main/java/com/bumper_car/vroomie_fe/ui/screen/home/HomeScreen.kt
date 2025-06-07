@@ -1,11 +1,9 @@
 package com.bumper_car.vroomie_fe.ui.screen.home
 
-import android.Manifest
-import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,9 +17,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -51,26 +49,29 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
 import com.bumper_car.vroomie_fe.ui.screen.drive.CameraGuideActivity
-import com.bumper_car.vroomie_fe.ui.screen.drive.NaviActivity
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
+import com.bumper_car.vroomie_fe.ui.theme.nanumFamily
+import com.google.common.io.Files.append
 
 private fun convertWgsToTm(lat: Double, lon: Double): Pair<Int, Int> {
     val x = (lon * 20037508.34 / 180.0).toInt()
@@ -150,7 +151,6 @@ fun HomeScreen(
                 TextField(
                     value = uiState.query,
                     onValueChange = { viewModel.onQueryChange(it) },
-                    placeholder = { Text("어디로 갈까요?", color = Color(0xFFD9D9D9), fontSize = 18.sp) },
                     leadingIcon = {
                         IconButton(onClick = {
                             viewModel.onQueryChange("")
@@ -249,7 +249,8 @@ fun HomeScreen(
                     TextField(
                         value = uiState.query,
                         onValueChange = { viewModel.onQueryChange(it) },
-                        placeholder = { Text("어디로 갈까요?", color = Color(0xFFD9D9D9), fontSize = 18.sp) },
+                        placeholder = { Text("어디로 갈까요?", color = Color(0xFFD9D9D9), fontSize = 20.sp) },
+                        leadingIcon = { Image(painter = painterResource(R.drawable.icon_gps), contentDescription = "", modifier = Modifier.size(28.dp)) },
                         singleLine = true,
                         shape = RoundedCornerShape(40.dp),
                         modifier = Modifier.weight(1f).height(56.dp)
@@ -265,70 +266,10 @@ fun HomeScreen(
                             unfocusedIndicatorColor = Color.Transparent
                         )
                     )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-
-                    IconButton(
-                        onClick = {
-                            val activity = context as? Activity
-                            if (activity == null) {
-                                Toast.makeText(context, "Activity context가 필요합니다.", Toast.LENGTH_SHORT).show()
-                                return@IconButton
-                            }
-
-                            if (ActivityCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.ACCESS_FINE_LOCATION
-                                ) != PackageManager.PERMISSION_GRANTED &&
-                                ActivityCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                ) != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                ActivityCompat.requestPermissions(
-                                    activity,
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ),
-                                    1001 // requestCode, 필요시 상수 정의 가능
-                                )
-                                return@IconButton
-                            }
-
-                            fusedClient.getCurrentLocation(
-                                Priority.PRIORITY_HIGH_ACCURACY,
-                                null
-                            ).addOnSuccessListener { location ->
-                                if (location != null) {
-                                    val intent = Intent(context, NaviActivity::class.java).apply {
-                                        putExtra("latitude", location.latitude.toString())
-                                        putExtra("longitude", location.longitude.toString())
-                                        putExtra("name", "현재 위치")
-                                    }
-                                    context.startActivity(intent)
-                                } else {
-                                    Toast.makeText(context, "현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
-                                }
-                            }.addOnFailureListener {
-                                Toast.makeText(context, "위치 획득 실패: ${it.localizedMessage}", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.size(56.dp).shadow(4.dp, shape = CircleShape).clip(CircleShape).background(Color.White)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.icon_gps),
-                            contentDescription = "자유 주행",
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(44.dp).padding(end = 4.dp, top = 4.dp)
-                        )
-                    }
                 }
 
 
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(36.dp))
 
                 // 운전 점수
                 Box(
@@ -339,9 +280,9 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp),
+                            .height(240.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.Bottom
                     ) {
                         Box(
                             modifier = Modifier.size(100.dp),
@@ -376,42 +317,97 @@ fun HomeScreen(
                         onClick = { navController.navigate("drive_score") },
                         modifier = Modifier
                             .size(240.dp)
-                            .shadow(64.dp, shape = CircleShape, clip = false)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.8f))
-                            .align(Alignment.BottomCenter)
+                            .background(Color.White.copy(alpha = 0.9f))
+                            .align(Alignment.Center),
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(vertical = 32.dp)
+                            verticalArrangement = Arrangement.Top,
+                            modifier = Modifier.matchParentSize()
                         ) {
+                            Spacer(Modifier.height(40.dp))
                             Text(
                                 text = "운전점수",
-                                fontSize = 24.sp
+                                fontFamily = nanumFamily,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = uiState.driveScore.toString(),
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontFamily = nanumFamily,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF007BFF)
                             )
-                            getDriveLevelImage(driveScoreLevel)?.let {
-                                Image(
-                                    painter = painterResource(it),
-                                    contentDescription = "현재 레벨",
-                                    modifier = Modifier.size(160.dp),
-                                    contentScale = ContentScale.FillWidth
-                                )
-                            }
                         }
+                        getDriveLevelImage(driveScoreLevel)?.let {
+                            Image(
+                                painter = painterResource(it),
+                                contentDescription = "현재 레벨",
+                                modifier = Modifier
+                                    .size(156.dp)
+                                    .offset(y = 28.dp),
+                                contentScale = ContentScale.FillWidth
+                            )
+                        }
+                    }
+
+                    val targetSweep = (uiState.driveScore / 100f) * 270f
+                    val sweepAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+
+                    LaunchedEffect(targetSweep) {
+                        sweepAnim.animateTo(
+                            targetSweep.coerceIn(0f, 270f),
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 1000,
+                                easing = androidx.compose.animation.core.FastOutSlowInEasing
+                            )
+                        )
+                    }
+
+                    val stroke = with(LocalDensity.current) {
+                        Stroke(width = 24.dp.toPx(), cap = StrokeCap.Round)
+                    }
+                    Canvas(
+                        modifier = Modifier
+                            .size(288.dp)
+                            .align(Alignment.Center)
+                    ) {
+                        val size = size.minDimension
+                        val radius = size / 2
+                        val center = Offset(size / 2, size / 2)
+                        val innerRadius = radius - stroke.width / 2
+
+                        val arcSize =
+                            androidx.compose.ui.geometry.Size(innerRadius * 2, innerRadius * 2)
+                        val topLeft = Offset(center.x - innerRadius, center.y - innerRadius)
+
+                        // 그라데이션 Progress 원
+                        drawArc(
+                            brush = Brush.sweepGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color(0xFF67FFE7),
+                                    0.5f to Color(0xFF51A2FF),
+                                    1.0f to Color(0xFF9B4AFF)
+                                ),
+                                center = center
+                            ),
+                            startAngle = 135f,
+                            sweepAngle = sweepAnim.value,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = stroke
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
                 Box(
                     modifier = Modifier
-                        .height(240.dp)
+                        .height(220.dp)
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color.White)
@@ -425,22 +421,25 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "운전 상식",
-                            fontSize = 20.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
 
                         uiState.driveTips.forEach { tip ->
                             Text(
-                                text = tip.title,
-                                fontSize = 16.sp,
+                                text = buildAnnotatedString {
+                                    pushStyle(SpanStyle(textDecoration = TextDecoration.Underline))
+                                    append(tip.title)
+                                    pop()
+                                },
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Medium,
-                                style = TextStyle(textDecoration = TextDecoration.Underline),
                                 color = Color.DarkGray,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
-                                    .padding(top = 8.dp)
+                                    .padding(top = 10.dp)
                                     .clickable { navController.navigate("drive_tip/${tip.tipId}") }
                             )
                         }
@@ -470,12 +469,12 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.icon_drive_record),
+                                painter = painterResource(R.drawable.icon_drive_history),
                                 contentDescription = "운전 기록",
                                 tint = Color.Unspecified,
                                 modifier = Modifier.size(60.dp)
                             )
-                            Text("운전 기록", color = Color.Black)
+                            Text("운전 기록", color = Color.Black, fontSize = 20.sp, fontFamily = nanumFamily, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -500,7 +499,7 @@ fun HomeScreen(
                                 tint = Color.Unspecified,
                                 modifier = Modifier.size(60.dp)
                             )
-                            Text("마이페이지", color = Color.Black)
+                            Text("마이페이지", color = Color.Black, fontSize = 20.sp, fontFamily = nanumFamily, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

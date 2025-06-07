@@ -1,35 +1,49 @@
 package com.bumper_car.vroomie_fe.navigation
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bumper_car.vroomie_fe.data.local.TokenPreferences
+import com.bumper_car.vroomie_fe.domain.usecase.GetMyInfoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class AppViewModel @Inject constructor() : ViewModel() {
-    var isLoggedIn by mutableStateOf<Boolean>(false)
-        private set
+class AppViewModel @Inject constructor(
+    private val tokenPreferences: TokenPreferences,
+    private val getMyInfoUseCase: GetMyInfoUseCase
+) : ViewModel() {
+    private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
+    val isLoggedIn: StateFlow<Boolean?> = _isLoggedIn
 
     init {
         viewModelScope.launch {
-            checkLoginStatus()
+            val token = tokenPreferences.tokenFlow.first()
+            Log.d("TokenLog", token.toString())
+            if (token == null) {
+                _isLoggedIn.value = null
+            } else if (token.isEmpty()) {
+                _isLoggedIn.value = false
+            } else {
+                try {
+                    getMyInfoUseCase()
+                    _isLoggedIn.value = true
+                } catch (e: Exception) {
+                    tokenPreferences.clearToken()
+                    _isLoggedIn.value = false
+                }
+            }
         }
     }
 
-    fun checkLoginStatus() {
-        /* TODO: 로그인 확인 usecase (DataStore에 토큰 있는지 확인) */
-//        isLoggedIn = true
-    }
-
-
     fun logout() {
         viewModelScope.launch {
-            /* TODO: 로그아웃 usecase */
-            isLoggedIn = false
+            tokenPreferences.clearToken()
+            _isLoggedIn.value = false
         }
     }
 }

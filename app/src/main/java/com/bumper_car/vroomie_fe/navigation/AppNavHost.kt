@@ -1,6 +1,16 @@
 package com.bumper_car.vroomie_fe.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.core.splashscreen.SplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -30,12 +40,21 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun AppNavHost(navController: NavHostController, viewModel: AppViewModel = hiltViewModel()) {
-    val isLoggedIn = viewModel.isLoggedIn
+fun AppNavHost(
+    navController: NavHostController,
+    viewModel: AppViewModel = hiltViewModel()
+) {
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+
+    if (isLoggedIn == null) {
+        LoadingScreen()
+        return
+    }
 
     NavHost(
         navController = navController,
-        startDestination = if (isLoggedIn) Screen.Home.route else Screen.Login.route) {
+        startDestination = if (isLoggedIn == true) Screen.Home.route else Screen.Login.route
+    ) {
         composable(Screen.Login.route) { LoginScreen(navController) }
         composable(Screen.SignUpExtraInfo.route) { SignUpExtraInfoScreen(navController) }
         composable(Screen.Home.route) { HomeScreen(navController) }
@@ -57,5 +76,17 @@ fun AppNavHost(navController: NavHostController, viewModel: AppViewModel = hiltV
             DriveHistoryDetailScreen(id = id, navController = navController)
         }
         composable(Screen.MyPage.route) { MyPageScreen(navController) }
+    }
+}
+
+@Composable
+fun LoadingScreen() {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
     }
 }

@@ -4,6 +4,7 @@ import com.bumper_car.vroomie_fe.data.remote.AuthInterceptor
 import android.util.Log
 import com.bumper_car.vroomie_fe.BuildConfig
 import com.bumper_car.vroomie_fe.data.local.TokenPreferences
+import com.bumper_car.vroomie_fe.data.remote.auth.AuthApi
 import com.bumper_car.vroomie_fe.data.remote.drivehistory.DriveHistoryApi
 import com.bumper_car.vroomie_fe.data.remote.drivetip.DriveTipApi
 import com.bumper_car.vroomie_fe.data.remote.kakao.KakaoNaviApi
@@ -64,6 +65,12 @@ object NetworkModule {
     @Singleton
     fun provideDriveHistoryApi(retrofit: Retrofit): DriveHistoryApi {
         return retrofit.create(DriveHistoryApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi {
+        return retrofit.create(AuthApi::class.java)
     }
 
     @Provides
