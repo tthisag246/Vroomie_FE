@@ -37,6 +37,9 @@
             android:configChanges="orientation"
             android:theme="@style/AppTheme" />
 
+        <activity android:name=".ui.screen.drive.DriveResultActivity"
+            android:exported="false" />
+
         <activity
             android:name=".ui.screen.drive.CameraGuideActivity"
             android:theme="@style/Theme.Vroomie_FE" />
