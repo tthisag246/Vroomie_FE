@@ -127,12 +127,12 @@ fun MyPageScreen(
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("차 모델 | ${uiState.carModel}", fontSize = 14.sp)
+                                Text("차 모델 | ${uiState.carModel ?: "-"}", fontSize = 14.sp)
                                 Text(
                                     "하이패스 | ${if (uiState.carHipass == null) "-" else if (uiState.carHipass == true) "보유 중" else "미보유"}",
                                     fontSize = 14.sp
                                 )
-                                Text("${uiState.carType} | ${uiState.carFuel}", fontSize = 14.sp)
+                                Text("${uiState.carType ?: "-"} | ${uiState.carFuel ?: "-"}", fontSize = 14.sp)
                             }
                         }
                     }
