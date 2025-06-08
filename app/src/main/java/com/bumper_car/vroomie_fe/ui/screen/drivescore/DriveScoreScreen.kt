@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -274,49 +275,84 @@ fun DriveScoreScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(40.dp))
                         // 전체 점수 분포 그래프
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(120.dp)
                         ) {
-                            // Normalize (y값 최대값 기준으로 비율 맞추기)
-                            val maxCount = uiState.percentileDistribution.values.maxOrNull() ?: 1
-
                             Canvas(modifier = Modifier.matchParentSize()) {
                                 val canvasWidth = size.width
                                 val canvasHeight = size.height
 
-                                val spacingPx = canvasWidth / 100
-
-                                val sortedEntries = (0..100).map { score ->
-                                    val count = uiState.percentileDistribution[score] ?: 0
-                                    Pair(score, count)
+                                // 1) 10점 단위로 버킷(구간) 생성
+                                val buckets = (0..100 step 10).map { start ->
+                                    val end = (start + 9).coerceAtMost(100)
+                                    Pair(start, end)
                                 }
 
-                                val points = sortedEntries.mapIndexed { index, (score, count) ->
-                                    val x = index * spacingPx
-                                    val heightRatio = count.toFloat() / maxCount
-                                    val y = canvasHeight * (1f - heightRatio)
+                                // 2) 각 버킷별 합계 계산
+                                val bucketCounts = buckets.map { (s, e) ->
+                                    (s..e).sumOf { score ->
+                                        uiState.percentileDistribution[score] ?: 0
+                                    } / 10f
+                                }
+
+                                val bucketCount = buckets.size
+                                val bucketSpacing = canvasWidth / (bucketCount - 1)
+
+                                val maxAvg = bucketCounts.maxOrNull()
+                                    ?.takeIf { it > 0f }
+                                    ?: 1f
+
+                                // 3) 버킷별 포인트 리스트 만들기 (x는 간격, y는 정규화)
+                                val points = bucketCounts.mapIndexed { idx, avg ->
+                                    val x = idx * bucketSpacing
+                                    val yRatio = avg / maxAvg
+                                    val y = canvasHeight * (1f - yRatio)
                                     Offset(x, y)
                                 }
 
-                                val path = androidx.compose.ui.graphics.Path().apply {
-                                    if (points.isNotEmpty()) {
-                                        moveTo(points.first().x, canvasHeight) // 시작은 아래쪽
-                                        lineTo(points.first().x, points.first().y)
-                                        points.forEach { point ->
-                                            lineTo(point.x, point.y)
-                                        }
-                                        lineTo(points.last().x, canvasHeight) // 마지막도 아래로
-                                        close() // 영역 닫기
+                                // 4) 스플라인 생성
+                                val smoothPath = Path().apply {
+                                    if (points.size < 2) return@apply
+
+                                    moveTo(points.first().x, points.first().y)
+
+                                    val tension = 0.5f
+
+                                    // 가상의 시작·끝 점(p0, p{n+1})을 복제해서 극단에서도 자연스럽게
+                                    val pts =
+                                        listOf(points.first()) + points + listOf(points.last())
+
+                                    for (i in 1 until pts.size - 2) {
+                                        val p0 = pts[i - 1]
+                                        val p1 = pts[i]
+                                        val p2 = pts[i + 1]
+                                        val p3 = pts[i + 2]
+
+                                        // Catmull-Rom 제어점 공식
+                                        val cp1 = Offset(
+                                            x = p1.x + (p2.x - p0.x) * tension / 3f,
+                                            y = p1.y + (p2.y - p0.y) * tension / 3f
+                                        )
+                                        val cp2 = Offset(
+                                            x = p2.x - (p3.x - p1.x) * tension / 3f,
+                                            y = p2.y - (p3.y - p1.y) * tension / 3f
+                                        )
+
+                                        cubicTo(
+                                            cp1.x, cp1.y,
+                                            cp2.x, cp2.y,
+                                            p2.x, p2.y
+                                        )
                                     }
                                 }
 
-                                // Draw filled area
+                                // 5) 면 채우기
                                 drawPath(
-                                    path = path,
+                                    path = smoothPath,
                                     brush = Brush.verticalGradient(
                                         colors = listOf(
                                             Color(0xFF51A2FF), // semi-transparent
@@ -325,27 +361,42 @@ fun DriveScoreScreen(
                                     )
                                 )
 
-                                // Draw line on top
-                                for (i in 0 until points.size - 1) {
-                                    drawLine(
-                                        color = Color(0xFF51A2FF),
-                                        start = points[i],
-                                        end = points[i + 1],
-                                        strokeWidth = 3f
+                                // 6) 선 그리기
+                                drawPath(
+                                    path = smoothPath,
+                                    color = Color(0xFF51A2FF),
+                                    style = Stroke(
+                                        width = 2.dp.toPx(),
+                                        cap = StrokeCap.Round
                                     )
-                                }
+                                )
 
                                 val myScore = uiState.score.coerceIn(0, 100)
-                                val myScoreX = myScore * spacingPx
-                                val myScoreY =
-                                    canvasHeight * (1f - (uiState.percentileDistribution[myScore]?.toFloat()
-                                        ?: 0f) / maxCount)
+                                val myBucketIndex = myScore / 10
+                                val withinFraction = (myScore % 10) / 10f
 
-                                // 점
+                                val scoreP0 = points.getOrNull(myBucketIndex - 1) ?: points[myBucketIndex]
+                                val scoreP1 = points[myBucketIndex]
+                                val scoreP2 = points.getOrNull(myBucketIndex + 1) ?: points.last()
+                                val scoreP3 = points.getOrNull(myBucketIndex + 2) ?: points.last()
+
+                                val t2 = withinFraction * withinFraction
+                                val t3 = t2 * withinFraction
+                                val tension = 0.5f
+                                val f0 = -tension*t3 +     t2 - 0.5f*withinFraction
+                                val f1 =  1.5f*t3 - 2.5f*t2 + 1f
+                                val f2 = -1.5f*t3 + 2f*t2 + 0.5f*withinFraction
+                                val f3 =  0.5f*t3 - 0.5f*t2
+                                val myScorePos = Offset(
+                                    x = scoreP0.x*f0 + scoreP1.x*f1 + scoreP2.x*f2 + scoreP3.x*f3,
+                                    y = scoreP0.y*f0 + scoreP1.y*f1 + scoreP2.y*f2 + scoreP3.y*f3
+                                )
+
+                                // 7) 점 찍기
                                 drawCircle(
                                     color = Color(0xFF0064FF),
                                     radius = 4.dp.toPx(),
-                                    center = Offset(myScoreX, myScoreY)
+                                    center = myScorePos
                                 )
 
                                 // 텍스트
@@ -357,8 +408,8 @@ fun DriveScoreScreen(
                                     textAlign = android.graphics.Paint.Align.CENTER
                                 }
 
-                                val textX = myScoreX
-                                val textY = myScoreY - 20.dp.toPx()
+                                val textX = myScorePos.x
+                                val textY = myScorePos.y - 20.dp.toPx()
 
                                 drawIntoCanvas { canvas ->
                                     canvas.nativeCanvas.drawText(
@@ -397,7 +448,7 @@ fun DriveScoreScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(28.dp))
 
                         // 그래프용 spacing 계산
                         val itemSpacing = 8.dp
@@ -444,7 +495,7 @@ fun DriveScoreScreen(
                                             color = Color(0xFF51A2FF),
                                             start = points[i],
                                             end = points[i + 1],
-                                            strokeWidth = 4f
+                                            strokeWidth = 5f
                                         )
                                     }
                                 }

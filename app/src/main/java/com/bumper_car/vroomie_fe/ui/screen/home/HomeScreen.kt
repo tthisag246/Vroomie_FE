@@ -348,7 +348,8 @@ fun HomeScreen(
                                 contentDescription = "현재 레벨",
                                 modifier = Modifier
                                     .size(156.dp)
-                                    .offset(y = 28.dp),
+                                    .padding(4.dp)
+                                    .offset(y = 44.dp),
                                 contentScale = ContentScale.FillWidth
                             )
                         }
