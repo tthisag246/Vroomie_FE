@@ -49,19 +49,27 @@ fun LoginScreen(
         context.startActivity(intent)
     }
 
-
-    // ✅ 외부 인텐트에서 token 받아서 처리
     LaunchedEffect(intent?.data) {
         if (!handled.value) {
             val uri = intent?.data
             if (uri?.scheme == "vroomie" && uri.host == "login-success") {
                 val token = uri.getQueryParameter("token") ?: return@LaunchedEffect
 
-                viewModel.saveToken(token)
+                viewModel.saveToken(token) // 토큰 저장
 
-                navController.navigate("extra_info") {
-                    popUpTo("login") { inclusive = true }
-                    launchSingleTop = true
+                // ViewModel에서 사용자 추가 정보 등록 여부 확인 요청
+                val isExtraInfoRegistered = viewModel.checkIfExtraInfoExists() // 가상의 ViewModel 함수
+
+                if (isExtraInfoRegistered) {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                } else {
+                    navController.navigate("extra_info") {
+                        popUpTo("login") { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
                 handled.value = true
             }
