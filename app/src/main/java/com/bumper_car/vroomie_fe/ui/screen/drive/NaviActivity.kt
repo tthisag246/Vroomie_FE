@@ -308,11 +308,29 @@ class NaviActivity : AppCompatActivity(),
 
 
     private fun extractCityAndProvince(fullAddress: String): String {
-        val parts = fullAddress.split(" ")
-        if (parts.size >= 2) {
-            return "${parts[0]} ${parts[1]}"
+        // 특정 키워드를 제거하거나 대체하여 주소를 정규화
+        var cleanedAddress = fullAddress
+            .replace("특별시", "")
+            .replace("광역시", "")
+            .replace("자치시", "") // 세종특별자치시와 같은 경우를 대비
+            .replace("도", "")
+            .trim() // 앞뒤 공백 제거
+
+        val parts = cleanedAddress.split(" ")
+
+        return when {
+            parts.size >= 2 -> {
+                // "서울 송파" 또는 "경기 수원" 형태로 반환
+                "${parts[0]} ${parts[1]}"
+            }
+            parts.isNotEmpty() -> {
+                // 한 단어 주소 (예: "서울")
+                parts[0]
+            }
+            else -> {
+                fullAddress // 처리할 수 없는 경우 원본 주소 반환
+            }
         }
-        return fullAddress
     }
 
     // 위치 기반 기능들을 초기화하고 시작하는 함수
