@@ -275,7 +275,7 @@ fun DriveScoreScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(40.dp))
                         // 전체 점수 분포 그래프
                         Box(
                             modifier = Modifier
@@ -448,7 +448,7 @@ fun DriveScoreScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(28.dp))
 
                         // 그래프용 spacing 계산
                         val itemSpacing = 8.dp
