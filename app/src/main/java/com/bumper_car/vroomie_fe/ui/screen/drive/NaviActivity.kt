@@ -441,13 +441,6 @@ class NaviActivity : AppCompatActivity(),
         } else {
             Toast.makeText(this, "위치 권한이 없어 현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
         }
-
-
-
-        // GPS 위치 업데이트 설정
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L) // 1초마다
-            .setMinUpdateDistanceMeters(1.0f) // 1m 이상 이동해야 반응
-            .build()
     }
 
 
@@ -706,10 +699,10 @@ class NaviActivity : AppCompatActivity(),
         lastLocation = currentLocation
 
         val elapsedTimeMillis = System.currentTimeMillis() - startTimeMillis
-        val elapsedSeconds = (elapsedTimeMillis / 1000).toInt()
+        val elapsedMinutes = (elapsedTimeMillis / 1000f / 60f).toInt()
 
-        val roundedDistance = (totalDistance * 100).roundToInt() / 100f
-        naviViewModel.updateDistanceAndDuration(roundedDistance, elapsedSeconds)
+        val roundedDistance = (totalDistance / 1000f * 10).roundToInt() / 10f
+        naviViewModel.updateDistanceAndDuration(roundedDistance, elapsedMinutes)
     }
 
 
