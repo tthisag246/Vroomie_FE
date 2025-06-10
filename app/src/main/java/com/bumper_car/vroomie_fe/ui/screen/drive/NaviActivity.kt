@@ -504,6 +504,7 @@ class NaviActivity : AppCompatActivity(),
             when (event) {
                 "Left_Deviation" -> {
                     naviViewModel.incrementLaneDeviationLeftCount()
+                    tts.stop()
                     tts.speak(
                         "차로의 왼쪽으로 치우쳤어요! 오른발이 도로의 중앙에 떠있는 듯한 지점에 맞추고 시야를 멀리 두세요.",
                         TextToSpeech.QUEUE_FLUSH, null, null
@@ -512,6 +513,7 @@ class NaviActivity : AppCompatActivity(),
 
                 "Right_Deviation" -> {
                     naviViewModel.incrementLaneDeviationRightCount()
+                    tts.stop()
                     tts.speak(
                         "차로의 오른쪽으로 치우쳤어요! 오른발이 도로의 중앙에 떠있는 듯한 지점에 맞추고 시야를 멀리 두세요.",
                         TextToSpeech.QUEUE_FLUSH, null, null
@@ -519,6 +521,7 @@ class NaviActivity : AppCompatActivity(),
                 }
 
                 "Cut_In" -> {
+                    tts.stop()
                     tts.speak(
                         "우측 또는 좌측 차량이 차로를 변경하려고 해요! 속도를 줄여서 끼어들 공간을 만들어주세요.",
                         TextToSpeech.QUEUE_FLUSH, null, null
@@ -535,6 +538,7 @@ class NaviActivity : AppCompatActivity(),
                     } else {
                         "앞차와 너무 가까워요! 속도를 줄여서 안전거리를 확보하세요."
                     }
+                    tts.stop()
                     tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
                 }
 
@@ -546,6 +550,7 @@ class NaviActivity : AppCompatActivity(),
                     } else {
                         "정지 시 앞차와의 거리를 충분히 확보하세요."
                     }
+                    tts.stop()
                     tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, null)
                 }
 
@@ -755,14 +760,17 @@ class NaviActivity : AppCompatActivity(),
 
             when (direction.rgCode) {
                 KNRGCode.KNRGCode_LeftTurn -> {
+                    tts.stop()
                     tts.speak("좌측 깜빡이를 켜세요. 교차로 내에서는 자기 차선대로 좌회전하세요. 유도선이 있다면 유도선을 따라 회전하세요.", TextToSpeech.QUEUE_FLUSH, null, null)
                     return false
                 }
                 KNRGCode.KNRGCode_RightTurn -> {
+                    tts.stop()
                     tts.speak("우측 깜빡이를 켜세요. 우회전하기 전, 좌측이나 정면에서 오는 차가 있는지 확인하세요. 보행자가 있는지 확인하세요.", TextToSpeech.QUEUE_FLUSH, null, null)
                     return false
                 }
                 KNRGCode.KNRGCode_UTurn -> {
+                    tts.stop()
                     tts.speak("좌측 깜빡이를 켜세요. 정면 신호가 좌회전/보행자/직진 신호일 때 유턴하여 3차선으로 들어가세요. 유턴 구간에서는 앞차의 뒤를 따라 순서대로 돌아야 합니다.", TextToSpeech.QUEUE_FLUSH, null, null)
                     return false
                 }
