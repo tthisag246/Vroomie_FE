@@ -94,7 +94,7 @@ class NaviActivity : AppCompatActivity(),
     // TTS
     private lateinit var tts: TextToSpeech
     private val lastEventTimestamps = mutableMapOf<String, Long>()
-    private val cooldownMillis = 6000L
+    private val cooldownMillis = 10000L
 
     // 거리/시간 계산을 위한 변수 추가
     private var lastLocation: android.location.Location? = null
@@ -499,7 +499,7 @@ class NaviActivity : AppCompatActivity(),
             val json = JSONObject(jsonString)
             val event = json.getString("event")
 
-            if (tts.isSpeaking || !isCooldownPassed(event)) return
+            if (!isCooldownPassed(event)) return
 
             when (event) {
                 "Left_Deviation" -> {
