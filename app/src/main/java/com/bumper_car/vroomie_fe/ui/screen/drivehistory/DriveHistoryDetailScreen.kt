@@ -1,6 +1,9 @@
 package com.bumper_car.vroomie_fe.ui.screen.drivehistory
 
+import android.view.TextureView
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,10 +25,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,13 +48,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavHostController
 import com.bumper_car.vroomie_fe.R
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+@OptIn(UnstableApi::class)
 @Composable
 fun DriveHistoryDetailScreen(
     navController: NavHostController,
@@ -329,6 +338,7 @@ fun DriveHistoryDetailScreen(
                                 )
                                 Spacer(Modifier.height(16.dp))
 
+
                                 val context = LocalContext.current
                                 val exoPlayer = remember(feedback.videoUrl) {
                                     ExoPlayer.Builder(context).build().apply {
@@ -336,16 +346,32 @@ fun DriveHistoryDetailScreen(
                                         prepare()
                                     }
                                 }
+
+                                var playerView by remember { mutableStateOf<PlayerView?>(null) }
+
+                                DisposableEffect(exoPlayer) {
+                                    onDispose {
+                                        // PlayerView와 연결 해제
+                                        playerView?.player = null
+                                        // ExoPlayer 해제
+                                        exoPlayer.release()
+                                    }
+                                }
+
                                 AndroidView(
-                                    factory = {
-                                        PlayerView(it).apply {
-                                            player = exoPlayer
+                                    factory = { ctx ->
+                                        PlayerView(ctx).also { pv ->
+                                            playerView = pv
+                                        }.apply {
                                             useController = true
                                             layoutParams = ViewGroup.LayoutParams(
                                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                                 ViewGroup.LayoutParams.WRAP_CONTENT
                                             )
                                         }
+                                    },
+                                    update = { view ->
+                                        view.player = exoPlayer
                                     },
                                     modifier = Modifier
                                         .fillMaxWidth()

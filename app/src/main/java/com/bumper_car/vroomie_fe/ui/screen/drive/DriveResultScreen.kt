@@ -92,7 +92,7 @@ fun DriveResultScreen(
                         .fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -135,14 +135,14 @@ fun DriveResultScreen(
                 }
             }
         },
-        containerColor = Color(0xFFDCDCDC),
+        containerColor = Color(0xFFF2F2F2),
         content = { innerPadding ->
             LazyColumn(
                 contentPadding = innerPadding,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .background(Color(0xFFF2F2F2)),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
                     Column(
